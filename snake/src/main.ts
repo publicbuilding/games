@@ -62,7 +62,7 @@ class SnakeGame {
     
     // Initialize controls
     const gameContainer = document.getElementById('game-container')!;
-    this._controls = new Controls(
+    this.controls = new Controls(
       gameContainer,
       (direction) => this.handleDirection(direction),
       () => this.handlePause()
@@ -262,6 +262,14 @@ class SnakeGame {
     
     // Refresh skin selector to show new unlocks
     this.buildSkinSelector();
+  }
+  
+  /**
+   * Cleanup method for proper resource release
+   */
+  public destroy(): void {
+    this.stopGame();
+    this.controls.destroy();
   }
 }
 
