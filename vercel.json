@@ -1,0 +1,6 @@
+{
+  "buildCommand": "cd worldbuilder && npm run build",
+  "outputDirectory": "worldbuilder/dist",
+  "framework": "vite",
+  "public": "worldbuilder/dist"
+}
