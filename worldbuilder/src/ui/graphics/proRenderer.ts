@@ -666,17 +666,25 @@ export class ProRenderer {
     // Render celebration screen effects (flash overlay)
     celebrationSystem.renderScreenEffects(ctx, width, height);
 
-    // Zoom level
+    // Zoom level and Seed display
     ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
     ctx.font = '12px sans-serif';
     ctx.textAlign = 'right';
     ctx.fillText(`🔍 ${(ui.zoom * 100).toFixed(0)}%`, width - 10, height - 10);
 
+    // Display map seed for sharing
+    if (state.mapSeed !== undefined) {
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+      ctx.font = '10px monospace';
+      ctx.textAlign = 'right';
+      ctx.fillText(`Seed: ${state.mapSeed.toString(16).toUpperCase()}`, width - 10, height - 26);
+    }
+
     // Help text for grid toggle
     ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
     ctx.font = '10px sans-serif';
     ctx.textAlign = 'right';
-    ctx.fillText(`Press G for grid`, width - 10, height - 25);
+    ctx.fillText(`Press G for grid`, width - 10, height - 40);
 
     // Render mini-map
     this.renderMiniMap(state, ui, width, height);

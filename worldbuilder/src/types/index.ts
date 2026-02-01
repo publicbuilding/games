@@ -137,6 +137,7 @@ export interface GameState {
   tutorialStep: number; // 0 = none, >0 = tutorial in progress
   settlementLevel: number; // 1-10, tracks current settlement level
   lastSettlementLevel: number; // Previous level for detecting level-ups
+  mapSeed?: number; // Seed for reproducible maps
 }
 
 // UI state
