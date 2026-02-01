@@ -3,14 +3,14 @@ import { createInitialState, saveGame, loadGame, deleteSave, getMapDimensions } 
 import { gameTick } from './core/production';
 import { placeBuilding, demolishBuilding, canPlaceBuilding, assignWorkers, sellResource } from './core/actions';
 import { getBuildingDef, MARKET_PRICES } from './core/buildings';
-import { AsianRenderer } from './ui/asianRenderer';
+import { ProRenderer } from './ui/graphics';
 import { InputHandler, InputAction } from './ui/input';
 import './style.css';
 
 class Game {
   private state: GameState;
   private ui: UIState;
-  private renderer: AsianRenderer;
+  private renderer: ProRenderer;
   private input: InputHandler;
   private canvas: HTMLCanvasElement;
   private lastSave: number = 0;
@@ -36,8 +36,8 @@ class Game {
       notificationTimeout: null,
     };
 
-    // Initialize renderer and input (with Asian theme)
-    this.renderer = new AsianRenderer(this.canvas);
+    // Initialize professional graphics renderer
+    this.renderer = new ProRenderer(this.canvas);
     this.input = new InputHandler(this.canvas, this.ui, (action) => this.handleInput(action));
 
     // Setup UI buttons
