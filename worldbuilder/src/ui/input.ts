@@ -21,6 +21,8 @@ export class InputHandler {
   private canvas: HTMLCanvasElement;
   private callback: InputCallback;
   private ui: UIState;
+  private renderer: any; // Reference to ProRenderer for hover state updates
+  private lastMousePos: { x: number; y: number } | null = null;
 
   // Touch state
   private touches: Map<number, { x: number; y: number }> = new Map();
@@ -95,6 +97,9 @@ export class InputHandler {
         const rect = canvas.getBoundingClientRect();
         const screenX = e.clientX - rect.left;
         const screenY = e.clientY - rect.top;
+
+        // Update building palette hover
+        this.updateBuildingPaletteHover(screenX, screenY, rect.width, rect.height);
 
         // Convert to world coordinates
         const worldPos = this.screenToWorld(screenX, screenY, rect.width, rect.height);
@@ -342,5 +347,48 @@ export class InputHandler {
 
   updateUI(ui: UIState): void {
     this.ui = ui;
+  }
+
+  /**
+   * Set renderer reference for hover state updates
+   */
+  setRenderer(renderer: any): void {
+    this.renderer = renderer;
+  }
+
+  /**
+   * Update building palette hover state based on current mouse position
+   */
+  updateBuildingPaletteHover(mouseX: number, mouseY: number, canvasWidth: number, canvasHeight: number): void {
+    if (!this.renderer || mouseY < canvasHeight - 100) {
+      // Not in palette area, clear hover
+      this.renderer?.setHoveredBuilding(null, null);
+      return;
+    }
+
+    const buildingTypes = Object.keys(BUILDINGS) as BuildingType[];
+    const btnSize = 60;
+    const spacing = 10;
+    const totalWidth = buildingTypes.length * (btnSize + spacing);
+    let startX = (canvasWidth - totalWidth) / 2;
+
+    if (totalWidth > canvasWidth - 40) {
+      startX = 20;
+    }
+
+    // Check if mouse is over any building button
+    for (let i = 0; i < buildingTypes.length; i++) {
+      const x = startX + i * (btnSize + spacing);
+      const y = canvasHeight - 100 + 10;
+      
+      if (mouseX >= x && mouseX <= x + btnSize && mouseY >= y && mouseY <= y + btnSize) {
+        const type = buildingTypes[i];
+        this.renderer.setHoveredBuilding(type, { x: mouseX, y: mouseY });
+        return;
+      }
+    }
+
+    // Not over any button, clear hover
+    this.renderer?.setHoveredBuilding(null, null);
   }
 }

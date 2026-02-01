@@ -1,5 +1,6 @@
-import { GameState, Tile, TileType, Resources, Building, BuildingType } from '../types';
+import { GameState, Tile, TileType, Resources, Building, BuildingType, ResourceType } from '../types';
 import { generateIntelligentMap } from './mapGeneration';
+import { getBuildingDef } from './buildings';
 
 const MAP_WIDTH = 40;  // Expanded map for exploration
 const MAP_HEIGHT = 30;
@@ -169,4 +170,81 @@ export function loadGame(): GameState | null {
 
 export function deleteSave(): void {
   localStorage.removeItem(SAVE_KEY);
+}
+
+/**
+ * Calculate production rate per resource in resources/minute
+ */
+export function getProductionRates(state: GameState): Record<ResourceType, number> {
+  const rates: Record<ResourceType, number> = {
+    rice: 0,
+    tea: 0,
+    silk: 0,
+    jade: 0,
+    iron: 0,
+    bamboo: 0,
+    gold: 0,
+  };
+
+  // Sum up production from all buildings
+  for (const building of state.buildings) {
+    const def = getBuildingDef(building.type);
+    
+    if (!def.production) continue;
+
+    // Check if building has workers (unless no workers needed)
+    const hasWorkers = def.workers === 0 || building.workers >= def.workers;
+    if (!hasWorkers) continue;
+
+    // Check adjacency requirements
+    const hasAdjacency = !def.production.requires || 
+      hasRequiredAdjacency(state.map, building);
+    if (!hasAdjacency) continue;
+
+    // Calculate rate for this building (convert from per-second to per-minute)
+    let rate = def.production.rate * 60;
+    
+    // Apply speed boost if active
+    if (building.speedBoostUntil && building.speedBoostUntil > Date.now()) {
+      rate *= 2;
+    }
+
+    rates[def.production.output] += rate;
+  }
+
+  return rates;
+}
+
+/**
+ * Check if a building has the required adjacent tile type
+ */
+function hasRequiredAdjacency(map: Tile[][], building: Building): boolean {
+  const def = getBuildingDef(building.type);
+  if (!def.production?.requires) return true;
+
+  const adjacent = getAdjacentTiles(map, building.x, building.y);
+  return adjacent.some(
+    (tile) => tile.type === def.production!.requires && (tile.resourceAmount ?? 0) > 0
+  );
+}
+
+/**
+ * Get adjacent tiles to a position
+ */
+function getAdjacentTiles(map: Tile[][], x: number, y: number): Tile[] {
+  const adjacent: Tile[] = [];
+  const directions = [
+    [0, -1], [0, 1], [-1, 0], [1, 0], // Cardinal
+    [-1, -1], [-1, 1], [1, -1], [1, 1], // Diagonal
+  ];
+
+  for (const [dx, dy] of directions) {
+    const nx = x + dx;
+    const ny = y + dy;
+    if (map[ny] && map[ny][nx]) {
+      adjacent.push(map[ny][nx]);
+    }
+  }
+
+  return adjacent;
 }

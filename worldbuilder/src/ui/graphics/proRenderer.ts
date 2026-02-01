@@ -6,7 +6,7 @@
 
 import { GameState, Building, Tile, UIState, BuildingType, TileType, PopulationType } from '../../types';
 import { getBuildingDef, BUILDINGS } from '../../core/buildings';
-import { getMapDimensions } from '../../core/gameState';
+import { getMapDimensions, getProductionRates } from '../../core/gameState';
 import { SpriteGenerator } from './spriteGenerator';
 import { IsometricRenderer } from './isometricRenderer';
 import { AnimationSystem } from './animationSystem';
@@ -151,6 +151,8 @@ export class ProRenderer {
   private showGridOverlay: boolean = false;
   private hoveredTile: { x: number; y: number } | null = null;
   private weatherState: WeatherState = { type: 'clear', intensity: 0, season: 'spring', temperature: 20 };
+  private hoveredBuildingType: BuildingType | null = null;
+  private hoveredBuildingPos: { x: number; y: number } | null = null;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -751,37 +753,52 @@ export class ProRenderer {
     // Settlement level and progress bar
     this.renderSettlementLevelBar(state, ctx, width);
 
-    // Resources with enhanced styling
-    ctx.font = 'bold 13px Georgia, serif';
+    // Resources with enhanced styling and production rates
+    const productionRates = getProductionRates(state);
+    
+    ctx.font = 'bold 12px Georgia, serif';
     ctx.fillStyle = '#1a1a1a';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
 
     const resources = [
-      { icon: '🌾', label: 'Rice', value: Math.floor(state.resources.rice), color: '#d4a574' },
-      { icon: '🫖', label: 'Tea', value: Math.floor(state.resources.tea), color: '#6b9d3e' },
-      { icon: '🪡', label: 'Silk', value: Math.floor(state.resources.silk), color: '#d4a5a5' },
-      { icon: '💎', label: 'Jade', value: Math.floor(state.resources.jade), color: '#696969' },
-      { icon: '⛏️', label: 'Iron', value: Math.floor(state.resources.iron), color: '#555555' },
-      { icon: '🎋', label: 'Bamboo', value: Math.floor(state.resources.bamboo), color: '#7db542' },
-      { icon: '💰', label: 'Gold', value: Math.floor(state.resources.gold), color: '#ffd700' },
+      { icon: '🌾', label: 'Rice', key: 'rice', color: '#d4a574' },
+      { icon: '🫖', label: 'Tea', key: 'tea', color: '#6b9d3e' },
+      { icon: '🪡', label: 'Silk', key: 'silk', color: '#d4a5a5' },
+      { icon: '💎', label: 'Jade', key: 'jade', color: '#696969' },
+      { icon: '⛏️', label: 'Iron', key: 'iron', color: '#555555' },
+      { icon: '🎋', label: 'Bamboo', key: 'bamboo', color: '#7db542' },
+      { icon: '💰', label: 'Gold', key: 'gold', color: '#ffd700' },
     ];
 
     let x = 10;
+    const boxWidth = 135;
     for (const res of resources) {
+      const value = state.resources[res.key as keyof typeof state.resources];
+      const production = productionRates[res.key as keyof typeof productionRates];
+      const formattedValue = this.formatNumber(value);
+      const formattedProduction = this.formatNumber(production);
+      
       // Draw resource box with color accent
       ctx.fillStyle = `${res.color}40`; // Transparent tint
-      ctx.fillRect(x, 48, 110, 20);
+      ctx.fillRect(x, 48, boxWidth, 28);
       
       ctx.strokeStyle = res.color;
       ctx.lineWidth = 1;
-      ctx.strokeRect(x, 48, 110, 20);
+      ctx.strokeRect(x, 48, boxWidth, 28);
       
-      // Resource text
+      // Resource icon and value
       ctx.fillStyle = '#1a1a1a';
-      ctx.fillText(`${res.icon} ${res.value}`, x + 5, 53);
-      x += 115;
-      if (x > width - 100) break; // Don't overflow
+      ctx.font = 'bold 12px Georgia, serif';
+      ctx.fillText(`${res.icon} ${formattedValue}`, x + 5, 50);
+      
+      // Production rate (+X/min)
+      ctx.fillStyle = production > 0 ? '#28a745' : '#999';
+      ctx.font = '10px Georgia, serif';
+      ctx.fillText(`+${formattedProduction}/min`, x + 5, 65);
+      
+      x += boxWidth + 5;
+      if (x > width - boxWidth - 10) break; // Don't overflow
     }
 
     // Population info with styled display
@@ -1192,13 +1209,19 @@ export class ProRenderer {
       startX = 20;
     }
 
+    const buttonBounds: Map<BuildingType, { x: number; y: number; size: number }> = new Map();
+
     buildingTypes.forEach((type, i) => {
       const def = BUILDINGS[type];
       const x = startX + i * (btnSize + spacing);
       const btnY = y + 10;
 
+      // Store button bounds for hover detection
+      buttonBounds.set(type, { x, y: btnY, size: btnSize });
+
       // Button background
       const isSelected = ui.selectedBuilding === type;
+      const isHovered = this.hoveredBuildingType === type;
       const canBuild = this.canAffordQuick(state, type);
 
       ctx.fillStyle = isSelected 
@@ -1206,9 +1229,9 @@ export class ProRenderer {
         : (canBuild ? BUILDING_COLORS[type] : '#444');
       ctx.fillRect(x, btnY, btnSize, btnSize);
 
-      // Border
-      ctx.strokeStyle = def.premium ? COLORS.premium : (isSelected ? '#fff' : '#666');
-      ctx.lineWidth = isSelected ? 3 : 1;
+      // Border (highlight if hovered)
+      ctx.strokeStyle = isHovered ? '#FFD700' : (def.premium ? COLORS.premium : (isSelected ? '#fff' : '#666'));
+      ctx.lineWidth = isHovered ? 2 : (isSelected ? 3 : 1);
       ctx.strokeRect(x, btnY, btnSize, btnSize);
 
       // Icon
@@ -1233,6 +1256,15 @@ export class ProRenderer {
       }
     });
 
+    // Render tooltip for hovered building
+    if (this.hoveredBuildingType && this.hoveredBuildingPos) {
+      const def = BUILDINGS[this.hoveredBuildingType];
+      const bounds = buttonBounds.get(this.hoveredBuildingType);
+      if (bounds) {
+        this.renderBuildingTooltip(ctx, def, this.hoveredBuildingType, state, bounds.x, bounds.y - 80, width);
+      }
+    }
+
     // Instructions
     ctx.fillStyle = '#888';
     ctx.font = '12px sans-serif';
@@ -1244,6 +1276,95 @@ export class ProRenderer {
       width / 2,
       y + 85
     );
+
+    // Store button bounds for input handler
+    (this as any).buildingPaletteBounds = buttonBounds;
+  }
+
+  /**
+   * Render tooltip for a building in the palette
+   */
+  private renderBuildingTooltip(
+    ctx: CanvasRenderingContext2D,
+    def: any,
+    type: BuildingType,
+    state: GameState,
+    x: number,
+    y: number,
+    maxWidth: number
+  ): void {
+    const tooltipWidth = 220;
+    const tooltipHeight = 80;
+    
+    // Adjust tooltip position to stay on screen
+    let tooltipX = x + 30;
+    let tooltipY = y;
+    if (tooltipX + tooltipWidth > maxWidth) {
+      tooltipX = maxWidth - tooltipWidth - 10;
+    }
+    if (tooltipY < 0) {
+      tooltipY = 10;
+    }
+
+    // Background
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.95)';
+    ctx.fillRect(tooltipX, tooltipY, tooltipWidth, tooltipHeight);
+
+    // Border
+    ctx.strokeStyle = '#FFD700';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(tooltipX, tooltipY, tooltipWidth, tooltipHeight);
+
+    // Title with icon
+    ctx.fillStyle = '#FFD700';
+    ctx.font = 'bold 13px Georgia, serif';
+    ctx.textAlign = 'left';
+    ctx.fillText(`${BUILDING_ICONS[type]} ${def.name}`, tooltipX + 8, tooltipY + 8);
+
+    // Cost information
+    ctx.fillStyle = '#ccc';
+    ctx.font = '11px sans-serif';
+    let costText = 'Cost: ';
+    const costs: string[] = [];
+    for (const [res, amount] of Object.entries(def.cost)) {
+      const have = (state.resources[res as keyof typeof state.resources] ?? 0);
+      const canAfford = have >= (amount as number);
+      const color = canAfford ? '#fff' : '#ff6b6b';
+      costs.push(`${amount}${res[0].toUpperCase()}`);
+    }
+    costText += costs.join(', ');
+    ctx.fillText(costText, tooltipX + 8, tooltipY + 25);
+
+    // Workers
+    if (def.workers > 0) {
+      ctx.fillStyle = '#aaa';
+      ctx.font = '11px sans-serif';
+      ctx.fillText(`Workers: ${def.workers}`, tooltipX + 8, tooltipY + 40);
+    }
+
+    // Production info
+    if (def.production) {
+      const rates = getProductionRates(state);
+      const thisBuilding = state.buildings.find(b => b.type === type);
+      const hasWorkers = def.workers === 0 || (thisBuilding?.workers ?? 0) >= def.workers;
+      
+      if (hasWorkers) {
+        ctx.fillStyle = '#2ecc71';
+        ctx.font = '11px sans-serif';
+        const production = def.production.rate * 60;
+        ctx.fillText(`+${this.formatNumber(production)}/min ${def.production.output}`, tooltipX + 8, tooltipY + 55);
+      } else {
+        ctx.fillStyle = '#ff9999';
+        ctx.font = '11px sans-serif';
+        ctx.fillText(`Needs ${def.workers} workers`, tooltipX + 8, tooltipY + 55);
+      }
+
+      if (def.production.requires) {
+        ctx.fillStyle = '#888';
+        ctx.font = '10px sans-serif';
+        ctx.fillText(`Requires ${def.production.requires} nearby`, tooltipX + 8, tooltipY + 70);
+      }
+    }
   }
 
   private canAffordQuick(state: GameState, type: BuildingType): boolean {
@@ -1255,5 +1376,30 @@ export class ProRenderer {
     }
     if (def.premium && state.premiumCurrency < 50) return false;
     return true;
+  }
+
+  /**
+   * Format large numbers for display (9999 -> 9.9k, 1000000 -> 1.0M)
+   */
+  private formatNumber(num: number): string {
+    if (num < 1000) return Math.floor(num).toString();
+    if (num < 1000000) return (num / 1000).toFixed(1) + 'k';
+    if (num < 1000000000) return (num / 1000000).toFixed(1) + 'M';
+    return (num / 1000000000).toFixed(1) + 'B';
+  }
+
+  /**
+   * Set building palette hover state
+   */
+  setHoveredBuilding(type: BuildingType | null, pos: { x: number; y: number } | null): void {
+    this.hoveredBuildingType = type;
+    this.hoveredBuildingPos = pos;
+  }
+
+  /**
+   * Get building palette hover state
+   */
+  getHoveredBuilding(): { type: BuildingType | null; pos: { x: number; y: number } | null } {
+    return { type: this.hoveredBuildingType, pos: this.hoveredBuildingPos };
   }
 }

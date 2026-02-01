@@ -55,6 +55,9 @@ class Game {
     // Initialize professional graphics renderer
     this.renderer = new ProRenderer(this.canvas);
     this.input = new InputHandler(this.canvas, this.ui, (action) => this.handleInput(action));
+    
+    // Pass renderer to input handler for hover state updates
+    this.input.setRenderer(this.renderer);
 
     // Setup UI buttons
     this.setupUIButtons();
