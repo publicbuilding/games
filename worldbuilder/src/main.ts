@@ -451,3 +451,4 @@ class Game {
 document.addEventListener('DOMContentLoaded', () => {
   new Game();
 });
+// Force rebuild at Sun Feb  1 20:37:23 UTC 2026
