@@ -1,0 +1,21 @@
+{
+  "name": "publicbuilding-games",
+  "version": "1.0.0",
+  "description": "Freemium web games - Snake, Poker, World Builder",
+  "private": true,
+  "workspaces": [
+    "snake",
+    "poker",
+    "worldbuilder",
+    "shared"
+  ],
+  "scripts": {
+    "dev:snake": "npm run dev --workspace=snake",
+    "dev:poker": "npm run dev --workspace=poker",
+    "dev:worldbuilder": "npm run dev --workspace=worldbuilder",
+    "build": "npm run build --workspaces",
+    "test": "npm run test --workspaces --if-present"
+  },
+  "author": "publicbuilding",
+  "license": "MIT"
+}
