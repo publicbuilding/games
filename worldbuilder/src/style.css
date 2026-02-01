@@ -28,7 +28,7 @@ html, body {
 
 #ui-overlay {
   position: fixed;
-  top: 60px;
+  top: 140px;
   right: 10px;
   display: flex;
   flex-direction: column;
@@ -85,7 +85,7 @@ html, body {
 /* Market panel */
 #market-panel {
   position: fixed;
-  top: 60px;
+  top: 140px;
   left: 10px;
   background: rgba(0, 0, 0, 0.85);
   padding: 12px;
@@ -222,7 +222,7 @@ html, body {
 /* Responsive */
 @media (max-width: 600px) {
   #ui-overlay {
-    top: 55px;
+    top: 130px;
     right: 5px;
   }
 
@@ -232,7 +232,7 @@ html, body {
   }
 
   #market-panel {
-    top: 55px;
+    top: 130px;
     left: 5px;
     padding: 8px;
   }

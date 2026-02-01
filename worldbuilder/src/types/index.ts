@@ -38,6 +38,8 @@ export type BuildingType =
   // Cultural & Residential
   'house' | 'temple' | 'inn' | 'harbor' | 'shipyard';
 
+export type BuildingCategory = 'housing' | 'production' | 'storage' | 'administration' | 'military' | 'healthcare' | 'resources';
+
 export interface BuildingDefinition {
   type: BuildingType;
   name: string;

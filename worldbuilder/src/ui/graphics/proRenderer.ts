@@ -5,7 +5,7 @@
  */
 
 import { GameState, Building, Tile, UIState, BuildingType, TileType, PopulationType } from '../../types';
-import { getBuildingDef, BUILDINGS } from '../../core/buildings';
+import { getBuildingDef, BUILDINGS, BUILDING_CATEGORIES, CATEGORY_LABELS } from '../../core/buildings';
 import { getMapDimensions, getProductionRates } from '../../core/gameState';
 import { SpriteGenerator } from './spriteGenerator';
 import { IsometricRenderer } from './isometricRenderer';
@@ -1039,18 +1039,18 @@ export class ProRenderer {
   }
 
   /**
-   * Render mini-map in corner (bottom-left, clickable)
+   * Render mini-map in corner (top-right, clickable)
    */
   private renderMiniMap(state: GameState, ui: UIState, width: number, height: number): void {
     const ctx = this.ctx;
     const miniMapSize = 120;
-    const miniMapX = 10;
-    const miniMapY = height - miniMapSize - 10;
+    const miniMapX = width - miniMapSize - 10;
+    const miniMapY = 10;
 
     // DEBUG: Log mini-map position
     if (this.animationFrameCount % 60 === 0) {
-      console.log(`[DEBUG] Mini-map Position - X: ${miniMapX}, Y: ${miniMapY}, CanvasHeight: ${height}, Size: ${miniMapSize}`);
-      console.log(`[DEBUG] Expected mini-map Y range: ${height - miniMapSize - 10} to ${height - 10}`);
+      console.log(`[DEBUG] Mini-map Position (TOP-RIGHT) - X: ${miniMapX}, Y: ${miniMapY}, CanvasWidth: ${width}, Size: ${miniMapSize}`);
+      console.log(`[DEBUG] Expected mini-map X range: ${width - miniMapSize - 10} to ${width - 10}`);
     }
 
     const mapWidth = state.map[0]?.length || 40;
@@ -1244,95 +1244,109 @@ export class ProRenderer {
     height: number
   ): void {
     const ctx = this.ctx;
-    const paletteHeight = 100;
+    const paletteHeight = 150;
     const y = height - paletteHeight;
 
     // Background
     ctx.fillStyle = 'rgba(0,0,0,0.85)';
     ctx.fillRect(0, y, width, paletteHeight);
 
-    // Building buttons
-    const buildingTypes = Object.keys(BUILDINGS) as BuildingType[];
-    const btnSize = 60;
-    const spacing = 10;
-    const totalWidth = buildingTypes.length * (btnSize + spacing);
-    let startX = (width - totalWidth) / 2;
-
-    // Scroll if too many buildings
-    if (totalWidth > width - 40) {
-      startX = 20;
-    }
+    // Divider line
+    ctx.strokeStyle = 'rgba(100, 150, 255, 0.3)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(width, y);
+    ctx.stroke();
 
     const buttonBounds: Map<BuildingType, { x: number; y: number; size: number }> = new Map();
+    const btnSize = 45;
+    const spacing = 8;
+    let currentY = y + 8;
+    const categoryHeight = 65;
+    
+    // Render each category
+    const categories = Object.keys(BUILDING_CATEGORIES) as (keyof typeof BUILDING_CATEGORIES)[];
+    
+    for (const category of categories) {
+      const buildingTypes = BUILDING_CATEGORIES[category];
+      if (buildingTypes.length === 0) continue; // Skip empty categories
+      
+      const categoryLabel = CATEGORY_LABELS[category];
+      
+      // Category header
+      ctx.fillStyle = '#FFD700';
+      ctx.font = 'bold 10px Georgia, serif';
+      ctx.textAlign = 'left';
+      ctx.fillText(`${categoryLabel.icon} ${categoryLabel.label}`, 12, currentY + 12);
+      
+      // Building buttons for this category
+      let xOffset = 12;
+      for (const type of buildingTypes) {
+        const def = BUILDINGS[type];
+        const btnX = xOffset;
+        const btnY = currentY + 20;
 
-    buildingTypes.forEach((type, i) => {
-      const def = BUILDINGS[type];
-      const x = startX + i * (btnSize + spacing);
-      const btnY = y + 10;
+        // Store button bounds for hover detection
+        buttonBounds.set(type, { x: btnX, y: btnY, size: btnSize });
 
-      // Store button bounds for hover detection
-      buttonBounds.set(type, { x, y: btnY, size: btnSize });
+        // Button background
+        const isSelected = ui.selectedBuilding === type;
+        const isHovered = this.hoveredBuildingType === type;
+        const canBuild = this.canAffordQuick(state, type);
 
-      // Button background
-      const isSelected = ui.selectedBuilding === type;
-      const isHovered = this.hoveredBuildingType === type;
-      const canBuild = this.canAffordQuick(state, type);
+        ctx.fillStyle = isSelected 
+          ? COLORS.selected 
+          : (canBuild ? BUILDING_COLORS[type] : '#444');
+        ctx.fillRect(btnX, btnY, btnSize, btnSize);
 
-      ctx.fillStyle = isSelected 
-        ? COLORS.selected 
-        : (canBuild ? BUILDING_COLORS[type] : '#444');
-      ctx.fillRect(x, btnY, btnSize, btnSize);
+        // Border (highlight if hovered)
+        ctx.strokeStyle = isHovered ? '#FFD700' : (def.premium ? COLORS.premium : (isSelected ? '#fff' : '#666'));
+        ctx.lineWidth = isHovered ? 2 : (isSelected ? 3 : 1);
+        ctx.strokeRect(btnX, btnY, btnSize, btnSize);
 
-      // Border (highlight if hovered)
-      ctx.strokeStyle = isHovered ? '#FFD700' : (def.premium ? COLORS.premium : (isSelected ? '#fff' : '#666'));
-      ctx.lineWidth = isHovered ? 2 : (isSelected ? 3 : 1);
-      ctx.strokeRect(x, btnY, btnSize, btnSize);
+        // Icon
+        ctx.font = '20px serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(BUILDING_ICONS[type], btnX + btnSize / 2, btnY + btnSize / 2 - 3);
 
-      // Icon
-      ctx.font = '24px serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(BUILDING_ICONS[type], x + btnSize / 2, btnY + btnSize / 2 - 5);
+        // Cost hint
+        const mainCost = Object.entries(def.cost)[0];
+        if (mainCost) {
+          ctx.font = '8px sans-serif';
+          ctx.fillStyle = canBuild ? '#fff' : '#888';
+          ctx.fillText(`${mainCost[1]}g`, btnX + btnSize / 2, btnY + btnSize - 6);
+        }
 
-      // Cost hint
-      const mainCost = Object.entries(def.cost)[0];
-      if (mainCost) {
-        ctx.font = '10px sans-serif';
-        ctx.fillStyle = canBuild ? '#fff' : '#888';
-        ctx.fillText(`${mainCost[1]}g`, x + btnSize / 2, btnY + btnSize - 8);
+        xOffset += btnSize + spacing;
+        
+        // Don't render more buttons than fit on screen
+        if (xOffset > width - 20) break;
       }
-
-      // Premium badge
-      if (def.premium) {
-        ctx.fillStyle = COLORS.premium;
-        ctx.font = '10px sans-serif';
-        ctx.fillText('⭐', x + btnSize - 10, btnY + 10);
-      }
-    });
+      
+      currentY += categoryHeight;
+    }
 
     // Render tooltip for hovered building
     if (this.hoveredBuildingType && this.hoveredBuildingPos) {
-      console.log(`[DEBUG] Hovering over building: ${this.hoveredBuildingType} at ${this.hoveredBuildingPos.x}, ${this.hoveredBuildingPos.y}`);
       const def = BUILDINGS[this.hoveredBuildingType];
       const bounds = buttonBounds.get(this.hoveredBuildingType);
       if (bounds) {
-        console.log(`[DEBUG] Building bounds found, rendering tooltip at (${bounds.x}, ${bounds.y - 80})`);
-        this.renderBuildingTooltip(ctx, def, this.hoveredBuildingType, state, bounds.x, bounds.y - 80, width);
-      } else {
-        console.log(`[DEBUG] Building bounds NOT found for ${this.hoveredBuildingType}`);
+        this.renderBuildingTooltip(ctx, def, this.hoveredBuildingType, state, bounds.x, Math.max(bounds.y - 90, 120), width);
       }
     }
 
     // Instructions
     ctx.fillStyle = '#888';
-    ctx.font = '12px sans-serif';
+    ctx.font = '11px sans-serif';
     ctx.textAlign = 'center';
     ctx.fillText(
       ui.selectedBuilding 
         ? 'Click map to place | Right-click to cancel | Shift+click to demolish'
-        : 'Select a building below | Scroll to zoom | Drag to pan',
+        : 'Select a building | Scroll to zoom | Drag to pan | Press H to hide UI',
       width / 2,
-      y + 85
+      y + paletteHeight - 5
     );
 
     // Store button bounds for input handler
@@ -1341,6 +1355,7 @@ export class ProRenderer {
 
   /**
    * Render tooltip for a building in the palette
+   * Shows: name, cost, production, workers required
    */
   private renderBuildingTooltip(
     ctx: CanvasRenderingContext2D,
@@ -1351,77 +1366,97 @@ export class ProRenderer {
     y: number,
     maxWidth: number
   ): void {
-    const tooltipWidth = 220;
-    const tooltipHeight = 80;
+    // Calculate dynamic height based on content
+    let contentLines = 3; // Title + cost + spacing
+    if (def.workers > 0) contentLines++;
+    if (def.production) contentLines++;
+    if (def.production?.requires) contentLines++;
+    if (def.housing) contentLines++;
+    if (def.storage) contentLines++;
+    
+    const tooltipWidth = 260;
+    const lineHeight = 14;
+    const tooltipHeight = 10 + (contentLines * lineHeight) + 5;
     
     // Adjust tooltip position to stay on screen
-    let tooltipX = x + 30;
+    let tooltipX = x + 15;
     let tooltipY = y;
-    if (tooltipX + tooltipWidth > maxWidth) {
+    if (tooltipX + tooltipWidth > maxWidth - 10) {
       tooltipX = maxWidth - tooltipWidth - 10;
     }
     if (tooltipY < 0) {
       tooltipY = 10;
     }
+    if (tooltipY + tooltipHeight > window.innerHeight - 50) {
+      tooltipY = window.innerHeight - tooltipHeight - 50;
+    }
 
-    // Background
+    // Background with semi-transparent panel
     ctx.fillStyle = 'rgba(0, 0, 0, 0.95)';
     ctx.fillRect(tooltipX, tooltipY, tooltipWidth, tooltipHeight);
 
-    // Border
+    // Border with accent color
     ctx.strokeStyle = '#FFD700';
     ctx.lineWidth = 2;
     ctx.strokeRect(tooltipX, tooltipY, tooltipWidth, tooltipHeight);
 
+    let lineY = tooltipY + 15;
+
     // Title with icon
     ctx.fillStyle = '#FFD700';
-    ctx.font = 'bold 13px Georgia, serif';
+    ctx.font = 'bold 12px Georgia, serif';
     ctx.textAlign = 'left';
-    ctx.fillText(`${BUILDING_ICONS[type]} ${def.name}`, tooltipX + 8, tooltipY + 8);
+    ctx.fillText(`${BUILDING_ICONS[type]} ${def.name}`, tooltipX + 10, lineY);
+    lineY += lineHeight;
 
     // Cost information
     ctx.fillStyle = '#ccc';
     ctx.font = '11px sans-serif';
-    let costText = 'Cost: ';
     const costs: string[] = [];
     for (const [res, amount] of Object.entries(def.cost)) {
-      const have = (state.resources[res as keyof typeof state.resources] ?? 0);
-      const canAfford = have >= (amount as number);
-      const color = canAfford ? '#fff' : '#ff6b6b';
-      costs.push(`${amount}${res[0].toUpperCase()}`);
+      costs.push(`${amount} ${res}`);
     }
-    costText += costs.join(', ');
-    ctx.fillText(costText, tooltipX + 8, tooltipY + 25);
+    ctx.fillText(`Cost: ${costs.join(', ')}`, tooltipX + 10, lineY);
+    lineY += lineHeight;
 
-    // Workers
+    // Workers required
     if (def.workers > 0) {
       ctx.fillStyle = '#aaa';
-      ctx.font = '11px sans-serif';
-      ctx.fillText(`Workers: ${def.workers}`, tooltipX + 8, tooltipY + 40);
+      ctx.font = '10px sans-serif';
+      ctx.fillText(`Workers needed: ${def.workers}`, tooltipX + 10, lineY);
+      lineY += lineHeight;
+    }
+
+    // Housing provided
+    if (def.housing && def.housing > 0) {
+      ctx.fillStyle = '#9f8';
+      ctx.font = '10px sans-serif';
+      ctx.fillText(`Housing: +${def.housing}`, tooltipX + 10, lineY);
+      lineY += lineHeight;
     }
 
     // Production info
     if (def.production) {
-      const rates = getProductionRates(state);
-      const thisBuilding = state.buildings.find(b => b.type === type);
-      const hasWorkers = def.workers === 0 || (thisBuilding?.workers ?? 0) >= def.workers;
-      
-      if (hasWorkers) {
-        ctx.fillStyle = '#2ecc71';
-        ctx.font = '11px sans-serif';
-        const production = def.production.rate * 60;
-        ctx.fillText(`+${this.formatNumber(production)}/min ${def.production.output}`, tooltipX + 8, tooltipY + 55);
-      } else {
-        ctx.fillStyle = '#ff9999';
-        ctx.font = '11px sans-serif';
-        ctx.fillText(`Needs ${def.workers} workers`, tooltipX + 8, tooltipY + 55);
-      }
+      ctx.fillStyle = '#2ecc71';
+      ctx.font = '11px sans-serif';
+      const production = def.production.rate * 60; // Convert per second to per minute
+      ctx.fillText(`Produces: +${this.formatNumber(production)}/min ${def.production.output}`, tooltipX + 10, lineY);
+      lineY += lineHeight;
 
       if (def.production.requires) {
         ctx.fillStyle = '#888';
         ctx.font = '10px sans-serif';
-        ctx.fillText(`Requires ${def.production.requires} nearby`, tooltipX + 8, tooltipY + 70);
+        ctx.fillText(`Requires ${def.production.requires} terrain nearby`, tooltipX + 10, lineY);
+        lineY += lineHeight;
       }
+    }
+
+    // Storage info
+    if (def.storage) {
+      ctx.fillStyle = '#a8d';
+      ctx.font = '10px sans-serif';
+      const storageItems = Object.entries(def.storage).map(([res, amount]) => `${res}:${amount}`);
+      ctx.fillText(`Storage: ${storageItems.join(', ')}`, tooltipX + 10, lineY);
     }
   }
 

@@ -17,6 +17,31 @@ import { BuildingDefinition, BuildingType } from '../types';
  * - Fish + Market → Gold (commerce)
  */
 
+/**
+ * Building categories for organized UI palette
+ */
+export type BuildingCategory = 'housing' | 'production' | 'storage' | 'administration' | 'military' | 'healthcare' | 'resources';
+
+export const BUILDING_CATEGORIES: Record<BuildingCategory, BuildingType[]> = {
+  housing: ['house', 'inn', 'dojo'],
+  production: ['ricePaddy', 'teaPlantation', 'silkFarm', 'fishingDock', 'blacksmith', 'teaHouse', 'shipyard'],
+  storage: ['warehouse', 'market'],
+  administration: ['temple'],
+  military: ['watchtower', 'castle'],
+  healthcare: [],
+  resources: ['jadeMine', 'ironMine', 'bambooGrove'],
+};
+
+export const CATEGORY_LABELS: Record<BuildingCategory, { icon: string; label: string }> = {
+  housing: { icon: '🏯', label: 'Housing' },
+  production: { icon: '⚙️', label: 'Production' },
+  storage: { icon: '📦', label: 'Storage & Trade' },
+  administration: { icon: '⛩️', label: 'Administration' },
+  military: { icon: '🗡️', label: 'Military' },
+  healthcare: { icon: '⚕️', label: 'Healthcare' },
+  resources: { icon: '⛏️', label: 'Resources' },
+};
+
 export const BUILDINGS: Record<BuildingType, BuildingDefinition> = {
   // ===== AGRICULTURE =====
   ricePaddy: {
