@@ -36,8 +36,8 @@ export function canPlaceBuilding(
 
   const tile = state.map[y][x];
 
-  // Check if tile is buildable
-  if (tile.type !== 'grass') {
+  // Check if tile is buildable (only on plains)
+  if (tile.type !== 'plains') {
     return { success: false, message: `Cannot build on ${tile.type}` };
   }
 

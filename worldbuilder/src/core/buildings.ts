@@ -1,91 +1,137 @@
 import { BuildingDefinition, BuildingType } from '../types';
 
+/**
+ * Asian-themed buildings representing East Asian dynastic architecture
+ * - Chinese: Pagodas, Jade Mines, Tea Houses, Markets
+ * - Japanese: Dojos, Temples, Harbor Houses
+ * - Korean: Rice Paddies, Silk Farms, Watchtowers
+ * - Cross-cultural: Monasteries, Inns, Workshops
+ */
+
 export const BUILDINGS: Record<BuildingType, BuildingDefinition> = {
-  lumberMill: {
-    type: 'lumberMill',
-    name: 'Lumber Mill',
-    cost: { gold: 50, stone: 10 },
+  ricePaddy: {
+    type: 'ricePaddy',
+    name: '🌾 Rice Paddy',
+    cost: { gold: 40, bamboo: 10 },
     workers: 2,
+    workerTypePreference: ['farmer', 'fisherman'],
     production: {
-      output: 'wood',
-      rate: 2, // 2 wood per second when working
-      requires: 'trees',
-    },
-    description: 'Produces wood from nearby trees. Place next to forests!',
-  },
-  quarry: {
-    type: 'quarry',
-    name: 'Quarry',
-    cost: { gold: 75, wood: 20 },
-    workers: 3,
-    production: {
-      output: 'stone',
-      rate: 1.5,
-      requires: 'rocks',
-    },
-    description: 'Extracts stone from nearby rocks. Place next to mountains!',
-  },
-  farm: {
-    type: 'farm',
-    name: 'Farm',
-    cost: { gold: 40, wood: 15 },
-    workers: 2,
-    production: {
-      output: 'food',
+      output: 'rice',
       rate: 3,
     },
-    description: 'Grows food to feed your population. No adjacency needed.',
+    description: 'Grows rice to feed your people. The lifeblood of the realm. Best worked by farmers.',
+    sprite: 'ricePaddy',
+  },
+  teaPlantation: {
+    type: 'teaPlantation',
+    name: '🫖 Tea Plantation',
+    cost: { gold: 60, bamboo: 20 },
+    workers: 2,
+    workerTypePreference: ['farmer'],
+    production: {
+      output: 'tea',
+      rate: 2,
+      requires: 'forest',
+    },
+    description: 'Cultivates premium tea. Place near forests. A luxury trade good.',
+    sprite: 'teaPlantation',
+  },
+  silkFarm: {
+    type: 'silkFarm',
+    name: '🪡 Silk Farm',
+    cost: { gold: 80, rice: 15 },
+    workers: 3,
+    workerTypePreference: ['merchant', 'farmer'],
+    production: {
+      output: 'silk',
+      rate: 1.5,
+    },
+    description: 'Produces luxurious silk. Highly valued in trade routes.',
+    sprite: 'silkFarm',
+  },
+  jadeMine: {
+    type: 'jadeMine',
+    name: '⛏️ Jade Mine',
+    cost: { gold: 100, bamboo: 15 },
+    workers: 3,
+    workerTypePreference: ['warrior'],
+    production: {
+      output: 'jade',
+      rate: 1,
+      requires: 'mountain',
+    },
+    description: 'Extracts precious jade from mountains. Sacred and valuable.',
+    sprite: 'jadeMine',
+  },
+  blacksmith: {
+    type: 'blacksmith',
+    name: '🔨 Blacksmith',
+    cost: { gold: 90, iron: 5 },
+    workers: 2,
+    workerTypePreference: ['warrior'],
+    production: {
+      output: 'iron',
+      rate: 2,
+    },
+    description: 'Forges iron tools and weapons. Essential for the defense of the realm.',
+    sprite: 'blacksmith',
   },
   house: {
     type: 'house',
-    name: 'House',
-    cost: { gold: 30, wood: 20, stone: 10 },
+    name: '🏯 House',
+    cost: { gold: 30, bamboo: 15 },
     workers: 0,
     housing: 4,
-    description: 'Provides housing for 4 people. More people = more workers!',
+    description: 'A traditional dwelling for 4 people. More people = more available workers.',
+    sprite: 'house',
+  },
+  temple: {
+    type: 'temple',
+    name: '⛩️ Temple',
+    cost: { gold: 150, jade: 10, bamboo: 20 },
+    workers: 1,
+    workerTypePreference: ['monk'],
+    housing: 2,
+    description: 'A sacred temple that attracts monks and provides housing. Blessing for the realm.',
+    sprite: 'temple',
   },
   market: {
     type: 'market',
-    name: 'Market',
-    cost: { gold: 100, wood: 30, stone: 20 },
+    name: '🏪 Market',
+    cost: { gold: 100, bamboo: 25 },
     workers: 1,
-    description: 'Sell excess resources for gold. Click to trade!',
+    workerTypePreference: ['merchant'],
+    description: 'Trade hub. Sell excess resources for gold. Attracts merchants.',
+    sprite: 'market',
   },
   warehouse: {
     type: 'warehouse',
-    name: 'Warehouse',
-    cost: { gold: 60, wood: 25 },
+    name: '📦 Warehouse',
+    cost: { gold: 60, bamboo: 20 },
     workers: 0,
-    storage: { wood: 100, stone: 100, food: 50, gold: 200 },
-    description: 'Increases storage capacity for all resources.',
+    storage: { rice: 150, tea: 100, silk: 80, jade: 60, iron: 100, bamboo: 200, gold: 300 },
+    description: 'Storage facility for resources. Increases capacity for all goods.',
+    sprite: 'warehouse',
   },
-  premiumFactory: {
-    type: 'premiumFactory',
-    name: '⭐ Auto Factory',
-    cost: { gold: 500 },
-    workers: 0,
-    production: {
-      output: 'gold',
-      rate: 5,
-    },
-    premium: true,
-    description: 'Generates gold automatically! No workers needed. (Premium)',
-  },
-  premiumMansion: {
-    type: 'premiumMansion',
-    name: '⭐ Mansion',
-    cost: { gold: 300 },
-    workers: 0,
-    housing: 12,
-    premium: true,
-    description: 'Luxurious housing for 12 people! (Premium)',
+  dojo: {
+    type: 'dojo',
+    name: '🥋 Dojo',
+    cost: { gold: 120, bamboo: 15 },
+    workers: 2,
+    workerTypePreference: ['warrior', 'monk'],
+    housing: 2,
+    description: 'Training hall for warriors and monks. Provides housing and defense training.',
+    sprite: 'dojo',
   },
 };
 
 export const MARKET_PRICES: Record<string, number> = {
-  wood: 5,
-  stone: 8,
-  food: 3,
+  rice: 2,
+  tea: 8,
+  silk: 15,
+  jade: 20,
+  iron: 5,
+  bamboo: 1,
 };
 
 export function getBuildingDef(type: BuildingType): BuildingDefinition {

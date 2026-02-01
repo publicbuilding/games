@@ -3,14 +3,14 @@ import { createInitialState, saveGame, loadGame, deleteSave, getMapDimensions } 
 import { gameTick } from './core/production';
 import { placeBuilding, demolishBuilding, canPlaceBuilding, assignWorkers, sellResource } from './core/actions';
 import { getBuildingDef, MARKET_PRICES } from './core/buildings';
-import { Renderer } from './ui/renderer';
+import { AsianRenderer } from './ui/asianRenderer';
 import { InputHandler, InputAction } from './ui/input';
 import './style.css';
 
 class Game {
   private state: GameState;
   private ui: UIState;
-  private renderer: Renderer;
+  private renderer: AsianRenderer;
   private input: InputHandler;
   private canvas: HTMLCanvasElement;
   private lastSave: number = 0;
@@ -36,8 +36,8 @@ class Game {
       notificationTimeout: null,
     };
 
-    // Initialize renderer and input
-    this.renderer = new Renderer(this.canvas);
+    // Initialize renderer and input (with Asian theme)
+    this.renderer = new AsianRenderer(this.canvas);
     this.input = new InputHandler(this.canvas, this.ui, (action) => this.handleInput(action));
 
     // Setup UI buttons
@@ -45,9 +45,9 @@ class Game {
 
     // Show welcome notification
     if (!saved) {
-      this.showNotification('Welcome! Build houses for population, then production buildings.');
+      this.showNotification('Welcome to the Eastern Realm! Build houses first, then farms for rice.');
     } else {
-      this.showNotification('Game loaded! Welcome back.');
+      this.showNotification('Welcome back to the Eastern Realm!');
     }
 
     // Start game loop
@@ -71,18 +71,18 @@ class Game {
     });
 
     // Market buttons
-    document.getElementById('btn-sell-wood')?.addEventListener('click', () => {
-      const result = sellResource(this.state, 'wood', 10);
+    document.getElementById('btn-sell-rice')?.addEventListener('click', () => {
+      const result = sellResource(this.state, 'rice', 10);
       this.showNotification(result.message);
     });
 
-    document.getElementById('btn-sell-stone')?.addEventListener('click', () => {
-      const result = sellResource(this.state, 'stone', 10);
+    document.getElementById('btn-sell-tea')?.addEventListener('click', () => {
+      const result = sellResource(this.state, 'tea', 10);
       this.showNotification(result.message);
     });
 
-    document.getElementById('btn-sell-food')?.addEventListener('click', () => {
-      const result = sellResource(this.state, 'food', 10);
+    document.getElementById('btn-sell-silk')?.addEventListener('click', () => {
+      const result = sellResource(this.state, 'silk', 10);
       this.showNotification(result.message);
     });
 

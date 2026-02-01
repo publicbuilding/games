@@ -1,9 +1,9 @@
-import { GameState, Building, Tile, TileType } from '../types';
+import { GameState, Building, Tile, TileType, Particle } from '../types';
 import { getBuildingDef, BUILDINGS } from './buildings';
 
-const FOOD_CONSUMPTION_RATE = 0.5; // Food per person per second
-const MIN_FOOD_FOR_GROWTH = 20;
-const POPULATION_GROWTH_RATE = 0.1; // New person per second when food > threshold
+const RICE_CONSUMPTION_RATE = 0.3; // Rice per person per second
+const MIN_RICE_FOR_GROWTH = 30;
+const POPULATION_GROWTH_RATE = 0.08; // New person per second when rice > threshold
 
 /**
  * Get adjacent tiles to a position
@@ -45,7 +45,8 @@ export function hasRequiredAdjacency(map: Tile[][], building: Building): boolean
 export function depleteAdjacentResource(
   map: Tile[][],
   building: Building,
-  amount: number
+  amount: number,
+  state: GameState
 ): number {
   const def = getBuildingDef(building.type);
   if (!def.production?.requires) return amount;
@@ -59,9 +60,22 @@ export function depleteAdjacentResource(
       tile.resourceAmount! -= depleted;
       remaining -= depleted * 10;
 
-      // If resource depleted, convert to grass
+      // Add particle effect for resource gathering
+      if (Math.random() < 0.3) {
+        state.particles.push({
+          x: building.x * 48 + 24,
+          y: building.y * 48 + 24,
+          vx: (Math.random() - 0.5) * 2,
+          vy: (Math.random() - 0.5) * 2 - 1,
+          life: 1,
+          type: 'dust',
+          color: 'rgba(200, 180, 140)',
+        });
+      }
+
+      // If resource depleted, convert to plains
       if (tile.resourceAmount! <= 0) {
-        tile.type = 'grass';
+        tile.type = 'plains';
         tile.resourceAmount = undefined;
       }
 
@@ -81,7 +95,7 @@ export function processProduction(state: GameState, deltaSeconds: number): void 
 
     if (!def.production) continue;
 
-    // Check if building has workers (unless premium/no workers needed)
+    // Check if building has workers (unless no workers needed)
     const hasWorkers = def.workers === 0 || building.workers >= def.workers;
     if (!hasWorkers) continue;
 
@@ -105,9 +119,22 @@ export function processProduction(state: GameState, deltaSeconds: number): void 
 
     state.resources[resourceType] = newAmount;
 
+    // Add production animation
+    if (actualProduced > 0 && Math.random() < 0.2) {
+      state.particles.push({
+        x: building.x * 48 + 24,
+        y: building.y * 48 + 24,
+        vx: (Math.random() - 0.5) * 1,
+        vy: -Math.random() * 2,
+        life: 1,
+        type: 'smoke',
+        color: 'rgba(100, 100, 100, 0.5)',
+      });
+    }
+
     // Deplete source resources
     if (def.production.requires) {
-      depleteAdjacentResource(state.map, building, actualProduced);
+      depleteAdjacentResource(state.map, building, actualProduced, state);
     }
   }
 }
@@ -116,22 +143,22 @@ export function processProduction(state: GameState, deltaSeconds: number): void 
  * Process population consumption and growth
  */
 export function processPopulation(state: GameState, deltaSeconds: number): void {
-  // Food consumption
-  const foodNeeded = state.population * FOOD_CONSUMPTION_RATE * deltaSeconds;
+  // Rice consumption for food
+  const riceNeeded = state.population * RICE_CONSUMPTION_RATE * deltaSeconds;
   
-  if (state.resources.food >= foodNeeded) {
-    state.resources.food -= foodNeeded;
+  if (state.resources.rice >= riceNeeded) {
+    state.resources.rice -= riceNeeded;
 
-    // Population growth if food surplus
-    if (state.resources.food > MIN_FOOD_FOR_GROWTH && state.population < state.maxPopulation) {
+    // Population growth if rice surplus
+    if (state.resources.rice > MIN_RICE_FOR_GROWTH && state.population < state.maxPopulation) {
       const growth = POPULATION_GROWTH_RATE * deltaSeconds;
       state.population = Math.min(state.population + growth, state.maxPopulation);
       state.workers = Math.floor(state.population);
     }
   } else {
-    // Starvation - consume all food, population decreases
-    state.resources.food = 0;
-    const starvationRate = 0.2 * deltaSeconds; // Lose 0.2 people per second
+    // Starvation - consume all rice, population decreases
+    state.resources.rice = 0;
+    const starvationRate = 0.15 * deltaSeconds; // Lose 0.15 people per second
     state.population = Math.max(1, state.population - starvationRate); // Never go below 1
     state.workers = Math.floor(state.population);
 
@@ -146,6 +173,14 @@ export function processPopulation(state: GameState, deltaSeconds: number): void 
       }
     }
   }
+
+  // Update day/night cycle
+  state.dayTime = (state.dayTime + deltaSeconds * 0.001) % 1; // Full day/night cycle every 1000 seconds
+
+  // Update season every 60 seconds in-game
+  const seasonProgress = (state.totalPlayTime / 1000 / 60) % 4;
+  const seasons: ('spring' | 'summer' | 'autumn' | 'winter')[] = ['spring', 'summer', 'autumn', 'winter'];
+  state.season = seasons[Math.floor(seasonProgress)];
 }
 
 /**
@@ -167,20 +202,48 @@ export function calculateMaxPopulation(state: GameState): number {
 /**
  * Calculate total storage capacity
  */
-export function calculateMaxStorage(state: GameState): { wood: number; stone: number; food: number; gold: number } {
-  const base = { wood: 200, stone: 200, food: 100, gold: 500 };
+export function calculateMaxStorage(state: GameState): any {
+  const base: any = { 
+    rice: 300, 
+    tea: 200, 
+    silk: 100, 
+    jade: 150, 
+    iron: 200, 
+    bamboo: 300, 
+    gold: 500 
+  };
 
   for (const building of state.buildings) {
     const def = getBuildingDef(building.type);
     if (def.storage) {
-      base.wood += def.storage.wood ?? 0;
-      base.stone += def.storage.stone ?? 0;
-      base.food += def.storage.food ?? 0;
+      base.rice += (def.storage as any).rice ?? 0;
+      base.tea += (def.storage as any).tea ?? 0;
+      base.silk += (def.storage as any).silk ?? 0;
+      base.jade += (def.storage as any).jade ?? 0;
+      base.iron += (def.storage as any).iron ?? 0;
+      base.bamboo += (def.storage as any).bamboo ?? 0;
       base.gold += def.storage.gold ?? 0;
     }
   }
 
   return base;
+}
+
+/**
+ * Update particle system
+ */
+function updateParticles(state: GameState, deltaSeconds: number): void {
+  for (let i = state.particles.length - 1; i >= 0; i--) {
+    const p = state.particles[i];
+    p.life -= deltaSeconds * 1.5; // Particle lifespan
+    p.x += p.vx;
+    p.y += p.vy;
+    p.vy += 0.1; // Gravity
+
+    if (p.life <= 0) {
+      state.particles.splice(i, 1);
+    }
+  }
 }
 
 /**
@@ -200,6 +263,7 @@ export function gameTick(state: GameState): void {
   // Process systems
   processProduction(state, deltaSeconds);
   processPopulation(state, deltaSeconds);
+  updateParticles(state, deltaSeconds);
 
   // Update timing
   state.lastUpdate = now;
