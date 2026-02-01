@@ -1,5 +1,5 @@
 import { GameState, Card, Player, GamePhase } from '../core/types';
-import { cardToString, dealCards } from '../core/deck';
+import { cardToString } from '../core/deck';
 import { getTotalPot } from '../core/betting';
 import { handToString } from '../core/handEvaluator';
 

@@ -1,24 +1,29 @@
 // Unit tests for skin system
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { SkinManager, DEFAULT_SKINS } from './skins';
 
-// Mock localStorage for tests
-const localStorageMock = (() => {
-  let store: Record<string, string> = {};
-  return {
-    getItem: (key: string) => store[key] || null,
-    setItem: (key: string, value: string) => { store[key] = value; },
-    removeItem: (key: string) => { delete store[key]; },
-    clear: () => { store = {}; },
-  };
-})();
+// Mock localStorage for tests - create fresh store for each test
+let localStorageStore: Record<string, string> = {};
+
+const localStorageMock = {
+  getItem: (key: string) => localStorageStore[key] || null,
+  setItem: (key: string, value: string) => { localStorageStore[key] = value; },
+  removeItem: (key: string) => { delete localStorageStore[key]; },
+  clear: () => { localStorageStore = {}; },
+};
 
 Object.defineProperty(global, 'localStorage', { value: localStorageMock });
 
 describe('SkinManager', () => {
   beforeEach(() => {
-    localStorageMock.clear();
+    // Clear localStorage before each test
+    localStorageStore = {};
+  });
+  
+  afterEach(() => {
+    // Ensure clean state after each test
+    localStorageStore = {};
   });
 
   describe('initialization', () => {
@@ -88,8 +93,17 @@ describe('SkinManager', () => {
   });
 
   describe('skin unlocking', () => {
+    beforeEach(() => {
+      // Ensure clean slate for unlock tests
+      localStorageStore = {};
+    });
+
     it('unlocks skins when score threshold is met', () => {
       const manager = new SkinManager();
+      
+      // Verify initial state - neon-blue should be locked
+      const initialSkins = manager.getSkins();
+      expect(initialSkins.find(s => s.id === 'neon-blue')?.unlocked).toBe(false);
       
       // Score of 50 should unlock neon-blue
       const unlocked = manager.checkUnlocks(50);
@@ -103,6 +117,11 @@ describe('SkinManager', () => {
 
     it('unlocks multiple skins at once', () => {
       const manager = new SkinManager();
+      
+      // Verify initial state - all premium skins should be locked
+      const initialSkins = manager.getSkins();
+      expect(initialSkins.find(s => s.id === 'neon-blue')?.unlocked).toBe(false);
+      expect(initialSkins.find(s => s.id === 'fire')?.unlocked).toBe(false);
       
       // Score of 200 should unlock neon-blue, fire, purple-haze, and gold
       const unlocked = manager.checkUnlocks(200);
@@ -138,9 +157,16 @@ describe('SkinManager', () => {
     });
 
     it('can select newly unlocked skin', () => {
+      // Explicitly clear for this test
+      localStorageStore = {};
+      
       const manager = new SkinManager();
       
-      // Initially locked
+      // Verify fire is initially locked
+      const fireSkin = manager.getSkins().find(s => s.id === 'fire');
+      expect(fireSkin?.unlocked).toBe(false);
+      
+      // Initially locked - cannot select
       expect(manager.selectSkin('fire')).toBe(false);
       
       // Unlock it

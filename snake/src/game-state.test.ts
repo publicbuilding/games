@@ -388,14 +388,31 @@ describe('Edge cases', () => {
     localStorageMock.clear();
     const state = createInitialState(DEFAULT_CONFIG, 'classic');
     state.status = GameStatus.Playing;
+    // Snake starts going Right
     
     // Try to change direction multiple times before tick
-    setDirection(state, Direction.Up);
-    setDirection(state, Direction.Left); // Should override Up since no tick yet
+    setDirection(state, Direction.Up);  // Valid: Up is not opposite of Right
+    setDirection(state, Direction.Down); // Valid: Down is not opposite of Right (overrides Up)
     
     tick(state, DEFAULT_CONFIG);
     
-    // Only the last valid direction should be applied
-    expect(state.direction).toBe(Direction.Left);
+    // The last valid direction should be applied (Down overrides Up)
+    expect(state.direction).toBe(Direction.Down);
+  });
+
+  it('prevents 180° turn even with multiple rapid inputs', () => {
+    localStorageMock.clear();
+    const state = createInitialState(DEFAULT_CONFIG, 'classic');
+    state.status = GameStatus.Playing;
+    // Snake starts going Right
+    
+    // Try valid then invalid direction
+    setDirection(state, Direction.Up);   // Valid: Up != opposite(Right)
+    setDirection(state, Direction.Left); // Invalid: Left == opposite(Right), rejected
+    
+    tick(state, DEFAULT_CONFIG);
+    
+    // Up should be applied since Left was rejected
+    expect(state.direction).toBe(Direction.Up);
   });
 });

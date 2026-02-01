@@ -24,6 +24,10 @@ describe('Resource Production', () => {
   });
 
   it('should produce resources from farms without adjacency requirements', () => {
+    // Start with a specific food amount to avoid cap issues
+    state.resources.food = 50;
+    state.maxResources.food = 200;
+    
     // Find a grass tile and place a farm
     let placed = false;
     for (let y = 0; y < state.map.length && !placed; y++) {
@@ -43,7 +47,7 @@ describe('Resource Production', () => {
     expect(placed).toBe(true);
     const initialFood = state.resources.food;
     
-    // Process 1 second of production
+    // Process 1 second of production (NOT gameTick which also consumes food)
     processProduction(state, 1);
     
     // Farm produces 3 food/s

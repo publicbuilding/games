@@ -231,11 +231,17 @@ class SnakeGame {
     // Check for skin unlocks
     const newUnlocks = this.skinManager.checkUnlocks(this.state.highScore);
     
+    // Check if player won (filled entire grid)
+    // Win = snake length equals grid size squared
+    const isWin = this.state.snake.length >= DEFAULT_CONFIG.gridSize * DEFAULT_CONFIG.gridSize;
+    
     // Update overlay
-    this.overlayTitle.textContent = 'Game Over';
-    this.overlayMessage.textContent = this.state.score >= this.state.highScore 
-      ? '🏆 New High Score!' 
-      : 'Try again!';
+    this.overlayTitle.textContent = isWin ? '🎉 You Win!' : 'Game Over';
+    this.overlayMessage.textContent = isWin 
+      ? 'Amazing! You filled the entire grid!'
+      : (this.state.score > this.state.highScore 
+        ? '🏆 New High Score!' 
+        : 'Try again!');
     this.finalScore.style.display = 'block';
     this.finalScore.textContent = `Score: ${this.state.score}`;
     this.startBtn.textContent = 'Play Again';

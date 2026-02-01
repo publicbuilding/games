@@ -1,5 +1,5 @@
 import { 
-  GameState, Player, GamePhase, Card, RoundHistoryEntry, 
+  GameState, Player, RoundHistoryEntry, 
   PlayerAction, EvaluatedHand 
 } from './types';
 import { createDeck, shuffleDeck, dealCards } from './deck';

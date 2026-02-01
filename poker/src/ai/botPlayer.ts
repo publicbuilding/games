@@ -1,4 +1,4 @@
-import { GameState, Player, PlayerAction, Card, HandRank } from '../core/types';
+import { GameState, Player, PlayerAction, Card } from '../core/types';
 import { evaluateHand } from '../core/handEvaluator';
 import { getAvailableActions, calculateCallAmount } from '../core/betting';
 
@@ -241,7 +241,7 @@ export function getAIThinkingDelay(personality: string): number {
 export function getAIComment(
   action: PlayerAction,
   personality: string,
-  handStrength: number
+  _handStrength: number
 ): string | null {
   if (Math.random() > 0.3) return null; // Only comment 30% of the time
   

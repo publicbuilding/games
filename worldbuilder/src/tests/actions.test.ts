@@ -164,9 +164,13 @@ describe('Building Demolition', () => {
   beforeEach(() => {
     state = createInitialState();
     state.resources = { wood: 500, stone: 500, food: 100, gold: 1000 };
+    state.maxResources = { wood: 1000, stone: 1000, food: 500, gold: 2000 };
   });
 
   it('should refund 50% of resources when demolishing', () => {
+    const houseCost = BUILDINGS.house.cost;
+    const initialGold = state.resources.gold;
+    
     // Place a house
     let placedAt: { x: number; y: number } | null = null;
     
@@ -181,15 +185,16 @@ describe('Building Demolition', () => {
       }
     }
 
-    const goldBeforeDemolish = state.resources.gold;
-    const houseCost = BUILDINGS.house.cost;
+    // After placing: gold = initialGold - houseCost.gold
+    const goldAfterPlace = state.resources.gold;
+    expect(goldAfterPlace).toBe(initialGold - (houseCost.gold ?? 0));
     
     const result = demolishBuilding(state, placedAt!.x, placedAt!.y);
     expect(result.success).toBe(true);
     
-    // Should refund 50%
+    // Should refund 50% of cost
     const expectedRefund = Math.floor((houseCost.gold ?? 0) * 0.5);
-    expect(state.resources.gold).toBe(goldBeforeDemolish + expectedRefund);
+    expect(state.resources.gold).toBe(goldAfterPlace + expectedRefund);
   });
 
   it('should remove building from state and map', () => {

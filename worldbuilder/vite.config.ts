@@ -1,6 +1,4 @@
-import { defineConfig } from 'vite';
-
-export default defineConfig({
+export default {
   base: './',
   build: {
     outDir: 'dist',
@@ -9,4 +7,4 @@ export default defineConfig({
     globals: true,
     environment: 'node',
   },
-});
+};

@@ -84,7 +84,8 @@ export class SkinManager {
     } catch (e) {
       console.warn('Failed to load skins from localStorage:', e);
     }
-    return [...DEFAULT_SKINS];
+    // Return deep copies to prevent mutation of DEFAULT_SKINS
+    return DEFAULT_SKINS.map(skin => ({ ...skin }));
   }
 
   private loadSelectedSkin(): string {

@@ -3,7 +3,7 @@ import { GameState, PlayerAction, RoundHistoryEntry } from './core/types';
 import { PokerRenderer } from './ui/renderer';
 import { makeAIDecision, getAIThinkingDelay, getAIComment } from './ai/botPlayer';
 import { FreemiumUI } from './ui/freemiumUI';
-import { getAvailableActions } from './core/betting';
+// Betting utilities used internally
 
 class PokerApp {
   private game: PokerGame;
@@ -35,7 +35,7 @@ class PokerApp {
       startingChips: 1000,
       smallBlind: 10,
       bigBlind: 20,
-      aiPersonalities: [undefined, 'tight', 'aggressive', 'loose'],
+      aiPersonalities: ['passive', 'tight', 'aggressive', 'loose'],
     };
     
     this.game = createGame(config);

@@ -5,8 +5,8 @@ const MAP_HEIGHT = 15;
 
 export function createInitialState(): GameState {
   return {
-    resources: { wood: 100, stone: 50, food: 50, gold: 200 },
-    maxResources: { wood: 200, stone: 200, food: 100, gold: 500 },
+    resources: { wood: 100, stone: 50, food: 200, gold: 200 },
+    maxResources: { wood: 200, stone: 200, food: 300, gold: 500 },
     population: 5,
     maxPopulation: 5,
     workers: 5,
