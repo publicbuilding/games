@@ -1,7 +1,6 @@
 // Canvas rendering
 
 import type { GameConfig, GameState, Point, Skin } from './types';
-import { GameStatus } from './types';
 
 const RAINBOW_COLORS = ['#ff0000', '#ff7f00', '#ffff00', '#00ff00', '#0000ff', '#4b0082', '#9400d3'];
 

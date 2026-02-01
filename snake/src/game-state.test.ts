@@ -1,6 +1,6 @@
 // Unit tests for game logic
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import {
   checkSelfCollision,
   createInitialState,
@@ -15,7 +15,7 @@ import {
   tick,
   togglePause,
 } from './game-state';
-import { Direction, GameConfig, GameState, GameStatus, Point } from './types';
+import { Direction, GameState, GameStatus, Point } from './types';
 
 // Mock localStorage for tests
 const localStorageMock = (() => {
@@ -28,7 +28,7 @@ const localStorageMock = (() => {
   };
 })();
 
-Object.defineProperty(global, 'localStorage', { value: localStorageMock });
+Object.defineProperty(globalThis, 'localStorage', { value: localStorageMock });
 
 describe('Point utilities', () => {
   it('pointsEqual returns true for same coordinates', () => {
@@ -330,7 +330,7 @@ describe('Game tick', () => {
 
   it('tick does nothing when not Playing', () => {
     state.status = GameStatus.Paused;
-    const initialSnake = [...state.snake.map(p => ({ ...p }))];
+    const initialSnake = [...state.snake.map((p: Point) => ({ ...p }))];
     
     tick(state, DEFAULT_CONFIG);
     

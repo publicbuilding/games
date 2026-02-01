@@ -91,7 +91,7 @@ export function generateFood(snake: Point[], gridSize: number): Point {
 /**
  * Calculate the next head position based on current direction
  */
-export function getNextHeadPosition(head: Point, direction: Direction, gridSize: number): Point {
+export function getNextHeadPosition(head: Point, direction: Direction, _gridSize: number): Point {
   let { x, y } = head;
   
   switch (direction) {

@@ -17,7 +17,8 @@ class SnakeGame {
   private renderer: Renderer;
   private state: GameState;
   private skinManager: SkinManager;
-  private controls: Controls;
+  // Controls instance sets up event listeners on construction, kept for potential cleanup
+  private readonly controls: Controls;
   private gameLoop: number | null = null;
   private lastTick: number = 0;
   
@@ -61,7 +62,7 @@ class SnakeGame {
     
     // Initialize controls
     const gameContainer = document.getElementById('game-container')!;
-    this.controls = new Controls(
+    this._controls = new Controls(
       gameContainer,
       (direction) => this.handleDirection(direction),
       () => this.handlePause()
@@ -191,14 +192,14 @@ class SnakeGame {
     if (elapsed >= this.state.speed) {
       this.lastTick = timestamp;
       
-      // Process game tick
-      tick(this.state, DEFAULT_CONFIG);
+      // Process game tick (may change game status)
+      const gameEnded = !tick(this.state, DEFAULT_CONFIG);
       
       // Update score display
       this.updateUI();
       
       // Check for game over
-      if (this.state.status === GameStatus.GameOver) {
+      if (gameEnded) {
         this.showGameOver();
         return;
       }
