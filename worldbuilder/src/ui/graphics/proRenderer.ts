@@ -153,6 +153,7 @@ export class ProRenderer {
   private weatherState: WeatherState = { type: 'clear', intensity: 0, season: 'spring', temperature: 20 };
   private hoveredBuildingType: BuildingType | null = null;
   private hoveredBuildingPos: { x: number; y: number } | null = null;
+  private showSidebars: boolean = true;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -176,7 +177,19 @@ export class ProRenderer {
       if (e.key.toLowerCase() === 'g') {
         this.showGridOverlay = !this.showGridOverlay;
       }
+      // Toggle sidebars with 'H' key
+      if (e.key.toLowerCase() === 'h') {
+        this.showSidebars = !this.showSidebars;
+        // Save to localStorage for persistence
+        localStorage.setItem('worldbuilder_showSidebars', this.showSidebars.toString());
+      }
     });
+    
+    // Load sidebar state from localStorage
+    const savedShowSidebars = localStorage.getItem('worldbuilder_showSidebars');
+    if (savedShowSidebars !== null) {
+      this.showSidebars = savedShowSidebars === 'true';
+    }
   }
 
   private setupCanvas(): void {
@@ -736,18 +749,41 @@ export class ProRenderer {
    */
   private renderUI(state: GameState, ui: UIState, width: number, height: number): void {
     const ctx = this.ctx;
+    
+    // DEBUG: Log canvas dimensions on first frame and occasionally
+    if (this.animationFrameCount === 1 || this.animationFrameCount % 300 === 0) {
+      console.log(`[DEBUG] renderUI called with dimensions: width=${width}, height=${height}`);
+      console.log(`[DEBUG] Canvas element: ${this.canvas.width}x${this.canvas.height}, Display: ${this.canvas.style.width} x ${this.canvas.style.height}`);
+      console.log(`[DEBUG] Sidebars visible: ${this.showSidebars}`);
+    }
 
-    // Draw Sekiro-inspired background panel with paper texture
+    // Skip UI rendering if sidebars are hidden
+    if (!this.showSidebars) {
+      // Still render floating effects and notifications, but skip panels
+      this.renderNotifications(ctx, width, height);
+      celebrationSystem.renderScreenEffects(ctx, width, height);
+      floatingNumberSystem.render(ctx, ui.cameraX, ui.cameraY, ui.zoom);
+      celebrationSystem.render(ctx, ui.cameraX, ui.cameraY, ui.zoom);
+      
+      // Show help text about H key
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+      ctx.font = '10px sans-serif';
+      ctx.textAlign = 'right';
+      ctx.fillText(`Press H to show sidebars`, width - 10, 20);
+      return;
+    }
+
+    // Draw Sekiro-inspired background panel with paper texture (reduced opacity)
     const panelHeight = 110;
     this.uiPolish.drawPanelWithBrushBorder(
       ctx,
       { x: 0, y: 0, width: width, height: panelHeight },
-      'rgba(245, 237, 220, 0.85)',
+      'rgba(245, 237, 220, 0.65)',  // Reduced from 0.85
       '#1a1a1a'
     );
     
-    // Alternative: Semi-transparent background for UI elements (expanded for settlement level)
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+    // Alternative: Semi-transparent background for UI elements (reduced opacity, expanded for settlement level)
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';  // Reduced from 0.3
     ctx.fillRect(0, 0, width, panelHeight);
 
     // Settlement level and progress bar
@@ -779,6 +815,11 @@ export class ProRenderer {
       const formattedValue = this.formatNumber(value);
       const formattedProduction = this.formatNumber(production);
       
+      // DEBUG: Log first resource to verify formatting
+      if (res.key === 'rice') {
+        console.log(`[DEBUG] Resource: ${res.key}, Raw Value: ${value}, Formatted: ${formattedValue}, Production: ${production}, FormattedProd: ${formattedProduction}`);
+      }
+      
       // Draw resource box with color accent
       ctx.fillStyle = `${res.color}40`; // Transparent tint
       ctx.fillRect(x, 48, boxWidth, 28);
@@ -804,7 +845,9 @@ export class ProRenderer {
     // Population info with styled display
     ctx.fillStyle = '#1a1a1a';
     ctx.font = 'bold 13px Georgia, serif';
-    ctx.fillText(`👥 Population: ${state.population}/${state.maxPopulation}`, 10, 78);
+    const formattedPop = this.formatNumber(state.population);
+    const formattedMaxPop = this.formatNumber(state.maxPopulation);
+    ctx.fillText(`👥 Population: ${formattedPop}/${formattedMaxPop}`, 10, 78);
 
     // Render notifications
     this.renderNotifications(ctx, width, height);
@@ -826,14 +869,17 @@ export class ProRenderer {
       ctx.fillText(`Seed: ${state.mapSeed.toString(16).toUpperCase()}`, width - 10, height - 26);
     }
 
-    // Help text for grid toggle
+    // Help text for grid and sidebar toggles
     ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
     ctx.font = '10px sans-serif';
     ctx.textAlign = 'right';
-    ctx.fillText(`Press G for grid`, width - 10, height - 40);
+    ctx.fillText(`Press G for grid | H to hide sidebars`, width - 10, height - 40);
 
     // Render mini-map
     this.renderMiniMap(state, ui, width, height);
+
+    // Render building palette (bottom panel)
+    this.renderBuildingPalette(state, ui, width, height);
 
     // Render tooltip for hovered tile
     if (this.hoveredTile && (state.visibilityGrid?.[this.hoveredTile.y]?.[this.hoveredTile.x] ?? false)) {
@@ -842,6 +888,11 @@ export class ProRenderer {
         const tooltipText = `${tile.type.toUpperCase()} (${tile.x}, ${tile.y})${
           tile.resourceAmount ? ` - Resources: ${Math.round(tile.resourceAmount)}` : ''
         }`;
+        
+        // DEBUG: Log when Plains tooltip appears
+        if (tile.type === 'plains') {
+          console.log(`[DEBUG] Plains tooltip rendered at hoveredTile (${this.hoveredTile.x}, ${this.hoveredTile.y})`);
+        }
         
         ctx.fillStyle = 'rgba(0, 0, 0, 0.9)';
         ctx.fillRect(10, height - 40, 200, 30);
@@ -852,9 +903,6 @@ export class ProRenderer {
         ctx.fillText(tooltipText, 15, height - 35);
       }
     }
-
-    // Render building palette for placement
-    this.renderBuildingPalette(state, ui, width, height);
   }
 
   /**
@@ -998,6 +1046,12 @@ export class ProRenderer {
     const miniMapSize = 120;
     const miniMapX = 10;
     const miniMapY = height - miniMapSize - 10;
+
+    // DEBUG: Log mini-map position
+    if (this.animationFrameCount % 60 === 0) {
+      console.log(`[DEBUG] Mini-map Position - X: ${miniMapX}, Y: ${miniMapY}, CanvasHeight: ${height}, Size: ${miniMapSize}`);
+      console.log(`[DEBUG] Expected mini-map Y range: ${height - miniMapSize - 10} to ${height - 10}`);
+    }
 
     const mapWidth = state.map[0]?.length || 40;
     const mapHeight = state.map.length || 30;
@@ -1258,10 +1312,14 @@ export class ProRenderer {
 
     // Render tooltip for hovered building
     if (this.hoveredBuildingType && this.hoveredBuildingPos) {
+      console.log(`[DEBUG] Hovering over building: ${this.hoveredBuildingType} at ${this.hoveredBuildingPos.x}, ${this.hoveredBuildingPos.y}`);
       const def = BUILDINGS[this.hoveredBuildingType];
       const bounds = buttonBounds.get(this.hoveredBuildingType);
       if (bounds) {
+        console.log(`[DEBUG] Building bounds found, rendering tooltip at (${bounds.x}, ${bounds.y - 80})`);
         this.renderBuildingTooltip(ctx, def, this.hoveredBuildingType, state, bounds.x, bounds.y - 80, width);
+      } else {
+        console.log(`[DEBUG] Building bounds NOT found for ${this.hoveredBuildingType}`);
       }
     }
 

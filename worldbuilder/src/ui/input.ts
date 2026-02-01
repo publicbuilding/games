@@ -56,7 +56,7 @@ export class InputHandler {
       const rect = canvas.getBoundingClientRect();
       this.callback({
         type: 'zoom',
-        delta: e.deltaY > 0 ? -0.1 : 0.1,
+        delta: e.deltaY > 0 ? -0.05 : 0.05,
         centerX: e.clientX - rect.left,
         centerY: e.clientY - rect.top,
       });
@@ -223,11 +223,11 @@ export class InputHandler {
       // +/- to zoom
       if (e.key === '+' || e.key === '=') {
         const rect = this.canvas.getBoundingClientRect();
-        this.callback({ type: 'zoom', delta: 0.1, centerX: rect.width / 2, centerY: rect.height / 2 });
+        this.callback({ type: 'zoom', delta: 0.05, centerX: rect.width / 2, centerY: rect.height / 2 });
       }
       if (e.key === '-') {
         const rect = this.canvas.getBoundingClientRect();
-        this.callback({ type: 'zoom', delta: -0.1, centerX: rect.width / 2, centerY: rect.height / 2 });
+        this.callback({ type: 'zoom', delta: -0.05, centerX: rect.width / 2, centerY: rect.height / 2 });
       }
     });
   }
@@ -383,6 +383,10 @@ export class InputHandler {
       
       if (mouseX >= x && mouseX <= x + btnSize && mouseY >= y && mouseY <= y + btnSize) {
         const type = buildingTypes[i];
+        // DEBUG: Log building hover detection
+        if (Math.random() < 0.02) { // Log ~2% of frames to reduce spam
+          console.log(`[DEBUG INPUT] Hovering over ${type} at screen pos (${mouseX}, ${mouseY}), button bounds (${x}, ${y}) to (${x + btnSize}, ${y + btnSize})`);
+        }
         this.renderer.setHoveredBuilding(type, { x: mouseX, y: mouseY });
         return;
       }
