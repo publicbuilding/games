@@ -21,6 +21,8 @@ export interface Tile {
   building?: Building;
   resourceAmount?: number; // For bamboo/mountain - how much left
   animationPhase?: number; // For water/forest animation
+  isStartingArea?: boolean; // Mark as part of starting village area
+  territory?: string; // Territory ID if part of discovered territory
 }
 
 // Building types - Asian themed (phase 2: expanded)
@@ -64,6 +66,7 @@ export interface Building {
   constructionProgress?: number; // 0-1 for building animations
   speedBoostUntil?: number; // Premium speed boost timestamp
   animationFrame?: number; // For worker/water animations
+  isStartingBuilding?: boolean; // Mark as starting Town Hall
 }
 
 // Population types for diversity
@@ -129,7 +132,11 @@ export interface GameState {
   quests: Quest[]; // Active and completed quests
   completedQuests: string[]; // Quest IDs that have been completed
   exploredAreas: Set<string>; // Map coordinates explored
+  visibilityGrid?: boolean[][]; // Fog of war grid
+  discoveredTerritories?: Map<string, any>; // New territories found
   tutorialStep: number; // 0 = none, >0 = tutorial in progress
+  settlementLevel: number; // 1-10, tracks current settlement level
+  lastSettlementLevel: number; // Previous level for detecting level-ups
 }
 
 // UI state

@@ -226,10 +226,17 @@ export function musicCultural(): void {
 export class SoundManager {
   private currentAmbience: string | null = null;
   private currentMusic: string | null = null;
+  private enabled: boolean = true;
+  private masterVolume: number = 0.8;
+  private effectVolume: number = 0.7;
+  private musicVolume: number = 0.5;
 
   // Initialize sound manager
   init(): void {
     console.log('[SoundManager] Initialized');
+    console.log('[SoundManager] Master Volume:', this.masterVolume);
+    console.log('[SoundManager] Effects Volume:', this.effectVolume);
+    console.log('[SoundManager] Music Volume:', this.musicVolume);
     // TODO: Initialize audio context
     // TODO: Load sound effects
     // TODO: Load music tracks
@@ -237,7 +244,8 @@ export class SoundManager {
 
   // Switch background music based on game state
   setMusicForGameState(state: 'exploration' | 'trade' | 'combat' | 'cultural' | 'normal'): void {
-    console.log(`[SoundManager] Switching to ${state} music`);
+    if (!this.enabled) return;
+    console.log(`[SoundManager] 🎵 Switching to ${state} music`);
     switch (state) {
       case 'exploration':
         musicExploration();
@@ -260,6 +268,7 @@ export class SoundManager {
 
   // Update ambience based on day/night and season
   updateAmbience(dayTime: number, season: string): void {
+    if (!this.enabled) return;
     const ambience = dayTime > 0.25 && dayTime < 0.75 ? 'day' : 'night';
     if (ambience !== this.currentAmbience) {
       this.currentAmbience = ambience;
@@ -272,10 +281,98 @@ export class SoundManager {
     soundSeasonal(season);
   }
 
+  // Play UI sound effect
+  playUISound(action: 'click' | 'place_building' | 'error' | 'success'): void {
+    if (!this.enabled) return;
+    const volume = this.effectVolume * this.masterVolume;
+    
+    switch (action) {
+      case 'click':
+        console.log(`[SFX] 🔘 UI Click (volume: ${volume.toFixed(1)})`);
+        break;
+      case 'place_building':
+        console.log(`[SFX] 🏗️  Building Placed (volume: ${volume.toFixed(1)})`);
+        break;
+      case 'error':
+        console.log(`[SFX] ⚠️  Error Buzz (volume: ${volume.toFixed(1)})`);
+        break;
+      case 'success':
+        console.log(`[SFX] ✅ Success Chime (volume: ${volume.toFixed(1)})`);
+        break;
+    }
+  }
+
+  // Play production sound effect
+  playProductionSound(buildingType: string): void {
+    if (!this.enabled) return;
+    const volume = this.effectVolume * this.masterVolume;
+    
+    console.log(`[SFX] 🏭 Production - ${buildingType} (volume: ${volume.toFixed(1)})`);
+    switch (buildingType) {
+      case 'farm':
+        console.log('[SFX] └─ Farm: soil, water sounds');
+        break;
+      case 'mine':
+        console.log('[SFX] └─ Mine: pickaxe striking rock');
+        break;
+      case 'blacksmith':
+        console.log('[SFX] └─ Blacksmith: hammer on anvil');
+        break;
+      case 'market':
+        console.log('[SFX] └─ Market: coins jingling');
+        break;
+      default:
+        console.log(`[SFX] └─ ${buildingType}: generic work sound`);
+    }
+  }
+
+  // Play celebration sound
+  playCelebrationSound(type: 'fanfare' | 'quest_complete' | 'level_up'): void {
+    if (!this.enabled) return;
+    const volume = this.effectVolume * this.masterVolume;
+    
+    switch (type) {
+      case 'fanfare':
+        console.log(`[SFX] 🎺 Fanfare (volume: ${volume.toFixed(1)})`);
+        break;
+      case 'quest_complete':
+        console.log(`[SFX] ✨ Quest Complete! (volume: ${volume.toFixed(1)})`);
+        break;
+      case 'level_up':
+        console.log(`[SFX] ⭐ Level Up! (volume: ${volume.toFixed(1)})`);
+        break;
+    }
+  }
+
+  // Play resource sound
+  playResourceSound(resourceType: string): void {
+    if (!this.enabled) return;
+    const volume = this.effectVolume * this.masterVolume;
+    console.log(`[SFX] 💰 Resource - ${resourceType} (volume: ${volume.toFixed(1)})`);
+  }
+
   // Play sound effect with volume control
   playSoundEffect(effectName: string, volume: number = 0.7): void {
-    console.log(`[SoundManager] Playing ${effectName} at volume ${volume}`);
+    if (!this.enabled) return;
+    const finalVolume = volume * this.masterVolume;
+    console.log(`[SoundManager] 🔊 Playing ${effectName} at volume ${finalVolume.toFixed(2)}`);
     // TODO: Implement volume control
+  }
+
+  // Set master volume (0-1)
+  setMasterVolume(volume: number): void {
+    this.masterVolume = Math.max(0, Math.min(1, volume));
+    console.log(`[SoundManager] 🔊 Master Volume: ${(this.masterVolume * 100).toFixed(0)}%`);
+  }
+
+  // Toggle sound on/off
+  setEnabled(enabled: boolean): void {
+    this.enabled = enabled;
+    console.log(`[SoundManager] ${enabled ? '🔊 Sound enabled' : '🔇 Sound disabled'}`);
+  }
+
+  isEnabled(): boolean {
+    return this.enabled;
   }
 }
 

@@ -12,7 +12,9 @@ export type InputAction =
   | { type: 'demolish'; x: number; y: number }
   | { type: 'tileClick'; x: number; y: number; shift: boolean }
   | { type: 'pan'; dx: number; dy: number }
-  | { type: 'zoom'; delta: number; centerX: number; centerY: number };
+  | { type: 'zoom'; delta: number; centerX: number; centerY: number }
+  | { type: 'hover'; x: number; y: number }
+  | { type: 'unhover' };
 
 export class InputHandler {
   private canvas: HTMLCanvasElement;
@@ -83,6 +85,28 @@ export class InputHandler {
     canvas.addEventListener('mouseleave', () => {
       this.isPanning = false;
       this.lastPanPos = null;
+      this.callback({ type: 'unhover' });
+    });
+
+    // Hover tracking for tooltips
+    canvas.addEventListener('mousemove', (e) => {
+      if (!this.isPanning) {
+        const rect = canvas.getBoundingClientRect();
+        const screenX = e.clientX - rect.left;
+        const screenY = e.clientY - rect.top;
+
+        // Convert to world coordinates
+        const worldPos = this.screenToWorld(screenX, screenY, rect.width, rect.height);
+        const tileX = Math.floor(worldPos.x / TILE_SIZE);
+        const tileY = Math.floor(worldPos.y / TILE_SIZE);
+
+        const { width, height } = getMapDimensions();
+        if (tileX >= 0 && tileX < width && tileY >= 0 && tileY < height) {
+          this.callback({ type: 'hover', x: tileX, y: tileY });
+        } else {
+          this.callback({ type: 'unhover' });
+        }
+      }
     });
   }
 

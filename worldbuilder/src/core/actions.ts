@@ -1,6 +1,7 @@
 import { GameState, Building, BuildingType, ResourceType } from '../types';
 import { getBuildingDef, MARKET_PRICES } from './buildings';
 import { getAdjacentTiles } from './production';
+import { getCurrentSettlementLevel, isBuildingUnlocked, getBuildingUnlockLevel } from './progression';
 
 export interface ActionResult {
   success: boolean;
@@ -44,6 +45,16 @@ export function canPlaceBuilding(
   // Check if tile already has building
   if (tile.building) {
     return { success: false, message: 'Tile already has a building' };
+  }
+
+  // Check building unlock level
+  const currentLevel = getCurrentSettlementLevel(state);
+  if (!isBuildingUnlocked(type, currentLevel)) {
+    const unlockLevel = getBuildingUnlockLevel(type);
+    return {
+      success: false,
+      message: `Unlocked at Level ${unlockLevel}`,
+    };
   }
 
   // Check if player can afford
@@ -246,4 +257,68 @@ export function applySpeedBoost(
   building.speedBoostUntil = Date.now() + durationMs;
 
   return { success: true, message: `Speed boost active for ${durationMs / 1000}s!` };
+}
+
+/**
+ * Scout and reveal new territory
+ * Expands the fog of war based on direction
+ */
+export function scoutTerritory(
+  state: GameState,
+  direction: 'north' | 'south' | 'east' | 'west',
+  scoutCost: number = 50
+): ActionResult {
+  // Check if player can afford scouting
+  if (state.resources.gold < scoutCost) {
+    return { success: false, message: `Need ${scoutCost} gold to scout (currently have ${state.resources.gold})` };
+  }
+
+  const { width, height } = { width: state.map[0]?.length || 40, height: state.map.length || 30 };
+  const tileSize = 20; // Reveal 20x20 tile area
+  
+  // Determine scout area based on direction
+  let revealX = 0, revealY = 0;
+  const centerX = Math.floor(width / 2);
+  const centerY = Math.floor(height / 2);
+  
+  switch (direction) {
+    case 'north':
+      revealY = Math.max(0, centerY - 25);
+      revealX = centerX - Math.floor(tileSize / 2);
+      break;
+    case 'south':
+      revealY = Math.min(height - tileSize, centerY + 15);
+      revealX = centerX - Math.floor(tileSize / 2);
+      break;
+    case 'east':
+      revealX = Math.min(width - tileSize, centerX + 15);
+      revealY = centerY - Math.floor(tileSize / 2);
+      break;
+    case 'west':
+      revealX = Math.max(0, centerX - 25);
+      revealY = centerY - Math.floor(tileSize / 2);
+      break;
+  }
+
+  // Reveal the scouted territory
+  let revealedCount = 0;
+  for (let y = revealY; y < Math.min(revealY + tileSize, height); y++) {
+    for (let x = revealX; x < Math.min(revealX + tileSize, width); x++) {
+      if (state.visibilityGrid?.[y] && !state.visibilityGrid[y][x]) {
+        state.visibilityGrid[y][x] = true;
+        revealedCount++;
+      }
+      if (state.exploredAreas && !state.exploredAreas.has(`${x},${y}`)) {
+        state.exploredAreas.add(`${x},${y}`);
+      }
+    }
+  }
+
+  // Deduct cost
+  state.resources.gold -= scoutCost;
+
+  return {
+    success: true,
+    message: `Scouted ${direction}! Revealed ${revealedCount} new tiles.`,
+  };
 }

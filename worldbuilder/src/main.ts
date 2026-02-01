@@ -1,10 +1,15 @@
 import { GameState, UIState, BuildingType } from './types';
 import { createInitialState, saveGame, loadGame, deleteSave, getMapDimensions } from './core/gameState';
 import { gameTick } from './core/production';
-import { placeBuilding, demolishBuilding, canPlaceBuilding, assignWorkers, sellResource } from './core/actions';
+import { placeBuilding, demolishBuilding, canPlaceBuilding, assignWorkers, sellResource, scoutTerritory } from './core/actions';
 import { getBuildingDef, MARKET_PRICES } from './core/buildings';
 import { ProRenderer } from './ui/graphics';
 import { InputHandler, InputAction } from './ui/input';
+import { soundManager } from './core/sounds';
+import { floatingNumberSystem } from './ui/feedback/floatingNumbers';
+import { celebrationSystem } from './ui/feedback/celebrations';
+import { activityIndicatorSystem } from './ui/feedback/activityIndicators';
+import { notificationSystem } from './ui/feedback/notifications';
 import './style.css';
 
 class Game {
@@ -19,6 +24,9 @@ class Game {
   constructor() {
     // Initialize canvas
     this.canvas = document.getElementById('game-canvas') as HTMLCanvasElement;
+    
+    // Initialize sound manager
+    soundManager.init();
     
     // Try to load saved game
     const saved = loadGame();
@@ -45,9 +53,9 @@ class Game {
 
     // Show welcome notification
     if (!saved) {
-      this.showNotification('Welcome to the Eastern Realm! Build houses first, then farms for rice.');
+      notificationSystem.important('Welcome to the Eastern Realm! Build houses first, then farms for rice.');
     } else {
-      this.showNotification('Welcome back to the Eastern Realm!');
+      notificationSystem.success('Welcome back to the Eastern Realm!');
     }
 
     // Start game loop
@@ -57,53 +65,110 @@ class Game {
   private setupUIButtons(): void {
     // Save button
     document.getElementById('btn-save')?.addEventListener('click', () => {
+      soundManager.playUISound('click');
       saveGame(this.state);
-      this.showNotification('Game saved!');
+      notificationSystem.success('Game saved!');
     });
 
     // Reset button
     document.getElementById('btn-reset')?.addEventListener('click', () => {
+      soundManager.playUISound('click');
       if (confirm('Are you sure you want to reset? All progress will be lost!')) {
+        soundManager.playSoundEffect('reset_confirm');
         deleteSave();
         this.state = createInitialState();
-        this.showNotification('Game reset!');
+        notificationSystem.important('Game reset!');
       }
     });
 
     // Market buttons
     document.getElementById('btn-sell-rice')?.addEventListener('click', () => {
+      soundManager.playUISound('click');
       const result = sellResource(this.state, 'rice', 10);
-      this.showNotification(result.message);
+      soundManager.playResourceSound('rice');
+      if (result.success) {
+        notificationSystem.success(result.message);
+        floatingNumberSystem.addResourceProduction(window.innerWidth / 2, 100, 'gold', 10);
+      } else {
+        notificationSystem.warning(result.message);
+        soundManager.playUISound('error');
+      }
     });
 
     document.getElementById('btn-sell-tea')?.addEventListener('click', () => {
+      soundManager.playUISound('click');
       const result = sellResource(this.state, 'tea', 10);
-      this.showNotification(result.message);
+      soundManager.playResourceSound('tea');
+      if (result.success) {
+        notificationSystem.success(result.message);
+        floatingNumberSystem.addResourceProduction(window.innerWidth / 2, 100, 'gold', 80);
+      } else {
+        notificationSystem.warning(result.message);
+        soundManager.playUISound('error');
+      }
     });
 
     document.getElementById('btn-sell-silk')?.addEventListener('click', () => {
+      soundManager.playUISound('click');
       const result = sellResource(this.state, 'silk', 10);
-      this.showNotification(result.message);
+      soundManager.playResourceSound('silk');
+      if (result.success) {
+        notificationSystem.success(result.message);
+        floatingNumberSystem.addResourceProduction(window.innerWidth / 2, 100, 'gold', 150);
+      } else {
+        notificationSystem.warning(result.message);
+        soundManager.playUISound('error');
+      }
     });
 
     document.getElementById('btn-sell-jade')?.addEventListener('click', () => {
+      soundManager.playUISound('click');
       const result = sellResource(this.state, 'jade', 5);
-      this.showNotification(result.message);
+      soundManager.playResourceSound('jade');
+      if (result.success) {
+        notificationSystem.success(result.message);
+        floatingNumberSystem.addResourceProduction(window.innerWidth / 2, 100, 'gold', 100);
+      } else {
+        notificationSystem.warning(result.message);
+        soundManager.playUISound('error');
+      }
     });
+
+    // Scout buttons for exploration
+    const directions: Array<'north' | 'south' | 'east' | 'west'> = ['north', 'south', 'east', 'west'];
+    for (const direction of directions) {
+      document.getElementById(`btn-scout-${direction}`)?.addEventListener('click', () => {
+        soundManager.playUISound('click');
+        const result = scoutTerritory(this.state, direction, 50);
+        if (result.success) {
+          notificationSystem.success(result.message);
+          celebrationSystem.createScreenFlash('#4a90e2', 100);
+        } else {
+          notificationSystem.warning(result.message);
+          soundManager.playUISound('error');
+        }
+      });
+    }
 
     // Premium modal
     document.getElementById('btn-premium')?.addEventListener('click', () => {
+      soundManager.playUISound('click');
       this.showPremiumModal();
     });
 
     document.getElementById('modal-close')?.addEventListener('click', () => {
+      soundManager.playUISound('click');
       this.hidePremiumModal();
     });
 
     document.getElementById('btn-buy-gems')?.addEventListener('click', () => {
+      soundManager.playUISound('click');
       // Mock purchase - in real game, this would integrate payment
       this.state.premiumCurrency += 100;
-      this.showNotification('🎉 +100 Gems (mock purchase)');
+      celebrationSystem.createConfettiBurst(window.innerWidth / 2, window.innerHeight / 2, 50);
+      soundManager.playCelebrationSound('fanfare');
+      notificationSystem.success('🎉 +100 Gems (mock purchase)');
+      floatingNumberSystem.add(window.innerWidth / 2, window.innerHeight / 2, '+100 💎', '#a6e3a1', true);
       this.hidePremiumModal();
     });
   }
@@ -113,8 +178,9 @@ class Game {
       case 'selectBuilding':
         this.ui.selectedBuilding = action.building;
         if (action.building) {
+          soundManager.playUISound('click');
           const def = getBuildingDef(action.building);
-          this.showNotification(`${def.name}: ${def.description}`);
+          notificationSystem.show(`${def.name}: ${def.description}`, 'info', 3000);
         }
         break;
 
@@ -137,6 +203,14 @@ class Game {
         this.ui.zoom = Math.max(0.5, Math.min(2, this.ui.zoom + action.delta));
         // Zoom towards cursor position could be added here
         break;
+
+      case 'hover':
+        this.renderer.setHoveredTile(action.x, action.y);
+        break;
+
+      case 'unhover':
+        this.renderer.clearHoveredTile();
+        break;
     }
 
     this.input.updateUI(this.ui);
@@ -148,31 +222,46 @@ class Game {
 
     // Shift+click to demolish
     if (shift && tile.building) {
+      soundManager.playUISound('click');
       const result = demolishBuilding(this.state, x, y);
-      this.showNotification(result.message);
+      if (result.success) {
+        notificationSystem.success(result.message);
+        celebrationSystem.createScreenFlash('#ff6b6b', 150);
+      } else {
+        notificationSystem.warning(result.message);
+        soundManager.playUISound('error');
+      }
       return;
     }
 
     // If we have a selected building, try to place it
     if (this.ui.selectedBuilding) {
+      soundManager.playUISound('click');
       const result = placeBuilding(this.state, this.ui.selectedBuilding, x, y);
-      this.showNotification(result.message);
       
-      // Auto-assign workers after placing
       if (result.success) {
+        soundManager.playUISound('place_building');
+        notificationSystem.success(result.message);
         const building = tile.building;
         if (building) {
+          // Floating number popup showing building name
+          floatingNumberSystem.addMilestone(x * 48 + 24, y * 48 + 24, `${this.ui.selectedBuilding}!`);
           const def = getBuildingDef(building.type);
           if (def.workers > 0) {
             assignWorkers(this.state, building, def.workers);
           }
         }
+      } else {
+        soundManager.playUISound('error');
+        notificationSystem.warning(result.message);
+        floatingNumberSystem.addError(x * 48 + 24, y * 48 + 24, 'Cannot build!');
       }
       return;
     }
 
     // Click on existing building - show info and manage workers
     if (tile.building) {
+      soundManager.playUISound('click');
       const building = tile.building;
       const def = getBuildingDef(building.type);
       
@@ -191,34 +280,28 @@ class Game {
         const assigned = assignWorkers(this.state, building, 1);
         if (assigned.success) {
           info += ' | +1 worker assigned';
+          floatingNumberSystem.add(x * 48 + 24, y * 48 + 24, '+1 👤', '#a6e3a1', false);
         }
       }
 
-      this.showNotification(info);
+      notificationSystem.show(info, 'info', 3000);
       return;
     }
 
     // Click on empty tile - show tile info
     if (tile.type !== 'grass') {
+      soundManager.playUISound('click');
       let info = `${tile.type.charAt(0).toUpperCase() + tile.type.slice(1)}`;
       if (tile.resourceAmount !== undefined) {
         info += ` - ${Math.round(tile.resourceAmount)} remaining`;
       }
-      this.showNotification(info);
+      notificationSystem.show(info, 'info', 3000);
     }
   }
 
   private showNotification(message: string): void {
-    this.ui.notification = message;
-    
-    if (this.ui.notificationTimeout) {
-      clearTimeout(this.ui.notificationTimeout);
-    }
-
-    this.ui.notificationTimeout = window.setTimeout(() => {
-      this.ui.notification = null;
-      this.ui.notificationTimeout = null;
-    }, 3000);
+    // Deprecated: use notificationSystem instead
+    notificationSystem.show(message, 'info', 3000);
   }
 
   private showPremiumModal(): void {
@@ -238,6 +321,13 @@ class Game {
   private gameLoop = (): void => {
     // Update game state
     gameTick(this.state);
+
+    // Update feedback systems (use delta time for smooth animations)
+    const deltaMs = 16; // ~60fps
+    floatingNumberSystem.update(deltaMs);
+    celebrationSystem.update(deltaMs);
+    activityIndicatorSystem.update(this.state.buildings, deltaMs);
+    notificationSystem.update(deltaMs);
 
     // Auto-save periodically
     const now = Date.now();

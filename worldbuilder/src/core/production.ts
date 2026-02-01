@@ -1,6 +1,9 @@
 import { GameState, Building, Tile, TileType, Particle } from '../types';
 import { getBuildingDef, BUILDINGS } from './buildings';
 import { updateQuestProgress } from './quests';
+import { floatingNumberSystem } from '../ui/feedback/floatingNumbers';
+import { soundManager } from './sounds';
+import { checkLevelUp } from './progression';
 
 const RICE_CONSUMPTION_RATE = 0.3; // Rice per person per second
 const MIN_RICE_FOR_GROWTH = 30;
@@ -120,17 +123,35 @@ export function processProduction(state: GameState, deltaSeconds: number): void 
 
     state.resources[resourceType] = newAmount;
 
-    // Add production animation
-    if (actualProduced > 0 && Math.random() < 0.2) {
-      state.particles.push({
-        x: building.x * 48 + 24,
-        y: building.y * 48 + 24,
-        vx: (Math.random() - 0.5) * 1,
-        vy: -Math.random() * 2,
-        life: 1,
-        type: 'smoke',
-        color: 'rgba(100, 100, 100, 0.5)',
-      });
+    // Add production animation and floating number
+    if (actualProduced > 0) {
+      // Sound effect for production
+      if (Math.random() < 0.1) { // Play less frequently to avoid spam
+        soundManager.playProductionSound(def.type);
+      }
+
+      // Floating number popup occasionally
+      if (Math.random() < 0.15) {
+        floatingNumberSystem.addResourceProduction(
+          building.x * 48 + 24,
+          building.y * 48 + 24,
+          resourceType,
+          actualProduced
+        );
+      }
+
+      // Particle animation
+      if (Math.random() < 0.2) {
+        state.particles.push({
+          x: building.x * 48 + 24,
+          y: building.y * 48 + 24,
+          vx: (Math.random() - 0.5) * 1,
+          vy: -Math.random() * 2,
+          life: 1,
+          type: 'smoke',
+          color: 'rgba(100, 100, 100, 0.5)',
+        });
+      }
     }
 
     // Deplete source resources
@@ -146,6 +167,7 @@ export function processProduction(state: GameState, deltaSeconds: number): void 
 export function processPopulation(state: GameState, deltaSeconds: number): void {
   // Rice consumption for food
   const riceNeeded = state.population * RICE_CONSUMPTION_RATE * deltaSeconds;
+  const previousPop = Math.floor(state.population);
   
   if (state.resources.rice >= riceNeeded) {
     state.resources.rice -= riceNeeded;
@@ -155,6 +177,31 @@ export function processPopulation(state: GameState, deltaSeconds: number): void 
       const growth = POPULATION_GROWTH_RATE * deltaSeconds;
       state.population = Math.min(state.population + growth, state.maxPopulation);
       state.workers = Math.floor(state.population);
+
+      // Celebration for population milestones (every 10)
+      const currentPop = Math.floor(state.population);
+      if (currentPop > previousPop && currentPop % 10 === 0) {
+        soundManager.playCelebrationSound('fanfare');
+        const defaultX = 300;
+        const defaultY = 300;
+        const firstBuildingX = state.buildings[0]?.x ?? 0;
+        const firstBuildingY = state.buildings[0]?.y ?? 0;
+        floatingNumberSystem.addMilestone(
+          firstBuildingX * 48 + 24 || defaultX,
+          firstBuildingY * 48 + 24 || defaultY,
+          `👤 Population ${currentPop}!`
+        );
+      } else if (currentPop > previousPop) {
+        // Regular population growth popup
+        const randomBuilding = state.buildings[Math.floor(Math.random() * state.buildings.length)];
+        const popX = (randomBuilding?.x ?? 6) * 48 + 24;
+        const popY = (randomBuilding?.y ?? 6) * 48 + 24;
+        floatingNumberSystem.addPopulationGrowth(
+          popX,
+          popY,
+          currentPop - previousPop
+        );
+      }
     }
   } else {
     // Starvation - consume all rice, population decreases
@@ -266,6 +313,18 @@ export function gameTick(state: GameState): void {
   processPopulation(state, deltaSeconds);
   updateParticles(state, deltaSeconds);
   updateQuestProgress(state);
+
+  // Check for level up
+  const levelUpResult = checkLevelUp(state, state.lastSettlementLevel as any);
+  if (levelUpResult.leveledUp) {
+    state.lastSettlementLevel = levelUpResult.newLevel as any;
+    // Mark that a level-up occurred (can be used for UI notifications)
+    (state as any).levelUpNotification = {
+      level: levelUpResult.newLevel,
+      levelName: require('./progression').SETTLEMENT_LEVELS[levelUpResult.newLevel as any].name,
+      rewards: levelUpResult.rewards,
+    };
+  }
 
   // Update timing
   state.lastUpdate = now;
