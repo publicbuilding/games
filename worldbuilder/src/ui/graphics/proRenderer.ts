@@ -974,13 +974,13 @@ export class ProRenderer {
   }
 
   /**
-   * Render mini-map in corner
+   * Render mini-map in corner (bottom-left, clickable)
    */
   private renderMiniMap(state: GameState, ui: UIState, width: number, height: number): void {
     const ctx = this.ctx;
     const miniMapSize = 120;
-    const miniMapX = width - miniMapSize - 10;
-    const miniMapY = 70;
+    const miniMapX = 10;
+    const miniMapY = height - miniMapSize - 10;
 
     const mapWidth = state.map[0]?.length || 40;
     const mapHeight = state.map.length || 30;
@@ -1050,11 +1050,41 @@ export class ProRenderer {
       cameraHeight * miniMapSize
     );
 
-    // Label
-    ctx.fillStyle = '#ffffff';
-    ctx.font = '10px sans-serif';
-    ctx.textAlign = 'left';
-    ctx.fillText('MAP', miniMapX + 5, miniMapY - 5);
+    // Store mini-map bounds for click detection
+    (this as any).miniMapBounds = { x: miniMapX, y: miniMapY, size: miniMapSize };
+  }
+
+  /**
+   * Handle mini-map click to pan camera
+   */
+  clickMiniMap(screenX: number, screenY: number): void {
+    const bounds = (this as any).miniMapBounds;
+    if (!bounds) return;
+
+    const { x, y, size } = bounds;
+    
+    // Check if click is within mini-map bounds
+    if (screenX < x || screenX > x + size || screenY < y || screenY > y + size) {
+      return;
+    }
+
+    // Get clicked position relative to mini-map
+    const relX = (screenX - x) / size;
+    const relY = (screenY - y) / size;
+
+    // Get map dimensions
+    const mapWidth = this.canvas.width / 48; // Approximate from canvas
+    const mapHeight = this.canvas.height / 48;
+
+    // Pan camera to clicked location
+    const callback = (this as any).miniMapCallback;
+    if (callback) {
+      callback({
+        type: 'pan',
+        dx: relX * mapWidth * 48 - this.canvas.width / 2,
+        dy: relY * mapHeight * 48 - this.canvas.height / 2,
+      });
+    }
   }
 
   /**

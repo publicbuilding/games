@@ -14,7 +14,8 @@ export type InputAction =
   | { type: 'pan'; dx: number; dy: number }
   | { type: 'zoom'; delta: number; centerX: number; centerY: number }
   | { type: 'hover'; x: number; y: number }
-  | { type: 'unhover' };
+  | { type: 'unhover' }
+  | { type: 'miniMapClick'; normalizedX: number; normalizedY: number };
 
 export class InputHandler {
   private canvas: HTMLCanvasElement;
@@ -231,6 +232,24 @@ export class InputHandler {
     const screenX = e.clientX - rect.left;
     const screenY = e.clientY - rect.top;
 
+    // Check if click is in mini-map (bottom-left corner, 120x120)
+    const miniMapSize = 120;
+    const miniMapX = 10;
+    const miniMapY = rect.height - miniMapSize - 10;
+    
+    if (
+      screenX >= miniMapX &&
+      screenX <= miniMapX + miniMapSize &&
+      screenY >= miniMapY &&
+      screenY <= miniMapY + miniMapSize
+    ) {
+      // Mini-map click detected
+      const relX = (screenX - miniMapX) / miniMapSize;
+      const relY = (screenY - miniMapY) / miniMapSize;
+      this.callback({ type: 'miniMapClick', normalizedX: relX, normalizedY: relY });
+      return;
+    }
+
     // Check if click is in building palette
     if (screenY > rect.height - 100) {
       this.handlePaletteClick(screenX, rect.width);
@@ -252,6 +271,24 @@ export class InputHandler {
     const rect = this.canvas.getBoundingClientRect();
     const screenX = clientX - rect.left;
     const screenY = clientY - rect.top;
+
+    // Check if tap is in mini-map (bottom-left corner, 120x120)
+    const miniMapSize = 120;
+    const miniMapX = 10;
+    const miniMapY = rect.height - miniMapSize - 10;
+    
+    if (
+      screenX >= miniMapX &&
+      screenX <= miniMapX + miniMapSize &&
+      screenY >= miniMapY &&
+      screenY <= miniMapY + miniMapSize
+    ) {
+      // Mini-map tap detected
+      const relX = (screenX - miniMapX) / miniMapSize;
+      const relY = (screenY - miniMapY) / miniMapSize;
+      this.callback({ type: 'miniMapClick', normalizedX: relX, normalizedY: relY });
+      return;
+    }
 
     // Check if tap is in building palette
     if (screenY > rect.height - 100) {

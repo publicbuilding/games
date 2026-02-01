@@ -268,6 +268,21 @@ class Game {
       case 'unhover':
         this.renderer.clearHoveredTile();
         break;
+
+      case 'miniMapClick':
+        // Convert mini-map normalized coordinates to world coordinates
+        const { width: mapWidth, height: mapHeight } = getMapDimensions();
+        const worldX = action.normalizedX * mapWidth * 48; // 48 is tile size in pixels
+        const worldY = action.normalizedY * mapHeight * 48;
+        
+        // Pan camera to clicked location
+        this.ui.cameraX = worldX - this.canvas.width / (2 * this.ui.zoom);
+        this.ui.cameraY = worldY - this.canvas.height / (2 * this.ui.zoom);
+        
+        // Clamp camera
+        this.ui.cameraX = Math.max(0, Math.min(this.ui.cameraX, mapWidth * 48));
+        this.ui.cameraY = Math.max(0, Math.min(this.ui.cameraY, mapHeight * 48));
+        break;
     }
 
     this.input.updateUI(this.ui);
