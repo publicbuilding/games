@@ -1,6 +1,7 @@
 /**
- * Professional Graphics Renderer - Integrates isometric, sprites, and animations
- * Main rendering engine for the worldbuilder game
+ * Professional Graphics Renderer - AAA Visual Polish
+ * Integrates isometric, sprites, animations, and premium visual effects
+ * Inspired by Anno 1800, StarCraft II, Sekiro
  */
 
 import { GameState, Building, Tile, UIState, BuildingType, TileType, PopulationType } from '../../types';
@@ -9,6 +10,13 @@ import { getMapDimensions } from '../../core/gameState';
 import { SpriteGenerator } from './spriteGenerator';
 import { IsometricRenderer } from './isometricRenderer';
 import { AnimationSystem } from './animationSystem';
+import { AtmosphericEffects } from './atmosphericEffects';
+import { WaterAndNatureEffects } from './waterAndNatureEffects';
+import { BuildingDetailsRenderer } from './buildingDetailsRenderer';
+import { CharacterPolishRenderer, type CharacterType } from './characterPolishRenderer';
+import { UIPolish } from './uiPolish';
+import { WeatherAndSeasons, type WeatherState } from './weatherAndSeasons';
+import { CameraAndPostProcessing } from './cameraAndPostProcessing';
 import { getCurrentSettlementLevel, getLevelProgress, SETTLEMENT_LEVELS } from '../../core/progression';
 import { floatingNumberSystem } from '../feedback/floatingNumbers';
 import { celebrationSystem } from '../feedback/celebrations';

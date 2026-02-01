@@ -1,6 +1,7 @@
 import { GameState, Tile, Building, UIState, BuildingType, TileType, Particle } from '../types';
 import { getBuildingDef, BUILDINGS } from '../core/buildings';
 import { getMapDimensions } from '../core/gameState';
+import { getCurrentSettlementLevel, isBuildingUnlocked, getBuildingUnlockLevel } from '../core/progression';
 
 const TILE_SIZE = 48;
 
@@ -506,25 +507,50 @@ export class AsianRenderer {
 
       // Button background
       const isSelected = ui.selectedBuilding === type;
-      const canBuild = this.canAffordQuick(state, type);
+      const currentLevel = getCurrentSettlementLevel(state);
+      const isUnlocked = isBuildingUnlocked(type, currentLevel);
+      const canBuild = this.canAffordQuick(state, type) && isUnlocked;
 
-      ctx.fillStyle = isSelected ? COLORS.selected : (canBuild ? BUILDING_COLORS[type] : '#ccc');
+      // Determine button color
+      let bgColor: string;
+      if (isSelected) {
+        bgColor = COLORS.selected;
+      } else if (isUnlocked) {
+        bgColor = canBuild ? BUILDING_COLORS[type] : '#999';
+      } else {
+        bgColor = '#555'; // Locked building color
+      }
+
+      ctx.fillStyle = bgColor;
       ctx.fillRect(x, btnY, btnSize, btnSize);
 
       // Border
-      ctx.strokeStyle = isSelected ? '#333' : '#8b7355';
-      ctx.lineWidth = isSelected ? 3 : 1;
+      ctx.strokeStyle = isSelected ? '#333' : (isUnlocked ? '#8b7355' : '#333');
+      ctx.lineWidth = isSelected ? 3 : 2;
       ctx.strokeRect(x, btnY, btnSize, btnSize);
 
       // Icon
       ctx.font = '28px serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillStyle = canBuild ? '#2c2c2c' : '#999';
+      ctx.fillStyle = isUnlocked && canBuild ? '#2c2c2c' : '#999';
       ctx.fillText(BUILDING_ICONS[type], x + btnSize / 2, btnY + btnSize / 2 - 5);
 
-      // Affordability indicator
-      if (!canBuild) {
+      // Lock indicator for locked buildings
+      if (!isUnlocked) {
+        const unlockLevel = getBuildingUnlockLevel(type);
+        ctx.fillStyle = 'rgba(0,0,0,0.7)';
+        ctx.fillRect(x, btnY, btnSize, btnSize);
+        
+        // Show lock symbol and unlock level
+        ctx.fillStyle = '#FFD700';
+        ctx.font = 'bold 12px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(`🔒 Lv${unlockLevel}`, x + btnSize / 2, btnY + btnSize / 2);
+      }
+      // Affordability indicator for unlocked but unaffordable
+      else if (!canBuild && isUnlocked) {
         ctx.fillStyle = 'rgba(0,0,0,0.5)';
         ctx.fillRect(x, btnY, btnSize, btnSize);
       }
