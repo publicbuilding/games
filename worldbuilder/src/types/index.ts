@@ -131,9 +131,9 @@ export interface GameState {
   dayTime: number; // 0-1, for day/night cycle
   quests: Quest[]; // Active and completed quests
   completedQuests: string[]; // Quest IDs that have been completed
-  exploredAreas: Set<string>; // Map coordinates explored
+  exploredAreas: string[]; // Map coordinates explored (JSON-serializable array)
   visibilityGrid?: boolean[][]; // Fog of war grid
-  discoveredTerritories?: Map<string, any>; // New territories found
+  discoveredTerritories?: Record<string, any>; // New territories found (JSON-serializable object)
   tutorialStep: number; // 0 = none, >0 = tutorial in progress
   settlementLevel: number; // 1-10, tracks current settlement level
   lastSettlementLevel: number; // Previous level for detecting level-ups

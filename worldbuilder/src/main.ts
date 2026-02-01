@@ -68,6 +68,50 @@ class Game {
   }
 
   private setupUIButtons(): void {
+    // Sound controls
+    const volumeSlider = document.getElementById('volume-slider') as HTMLInputElement;
+    const volumeLabel = document.getElementById('volume-label');
+    const muteBtn = document.getElementById('btn-mute') as HTMLButtonElement;
+
+    if (volumeSlider) {
+      // Set initial volume value
+      volumeSlider.value = String(soundManager.getMasterVolume() * 100);
+      
+      volumeSlider.addEventListener('input', (e) => {
+        const value = (e.target as HTMLInputElement).valueAsNumber;
+        const volumePercent = value / 100;
+        soundManager.setMasterVolume(volumePercent);
+        
+        // Update label
+        if (volumeLabel) {
+          volumeLabel.textContent = `${Math.round(value)}%`;
+        }
+        
+        // Play a soft click to indicate volume change
+        soundManager.playUISound('click');
+      });
+    }
+
+    if (muteBtn) {
+      muteBtn.addEventListener('click', () => {
+        const isCurrentlyEnabled = soundManager.isEnabled();
+        soundManager.setEnabled(!isCurrentlyEnabled);
+        
+        if (isCurrentlyEnabled) {
+          muteBtn.textContent = '🔇 Unmute';
+          muteBtn.classList.add('muted');
+          if (volumeLabel) volumeLabel.style.opacity = '0.5';
+          if (volumeSlider) volumeSlider.style.opacity = '0.5';
+        } else {
+          muteBtn.textContent = '🔊 Mute';
+          muteBtn.classList.remove('muted');
+          soundManager.playUISound('click');
+          if (volumeLabel) volumeLabel.style.opacity = '1';
+          if (volumeSlider) volumeSlider.style.opacity = '1';
+        }
+      });
+    }
+
     // Save button
     document.getElementById('btn-save')?.addEventListener('click', () => {
       soundManager.playUISound('click');

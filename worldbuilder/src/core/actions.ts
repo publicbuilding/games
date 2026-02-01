@@ -308,8 +308,8 @@ export function scoutTerritory(
         state.visibilityGrid[y][x] = true;
         revealedCount++;
       }
-      if (state.exploredAreas && !state.exploredAreas.has(`${x},${y}`)) {
-        state.exploredAreas.add(`${x},${y}`);
+      if (state.exploredAreas && !state.exploredAreas.includes(`${x},${y}`)) {
+        state.exploredAreas.push(`${x},${y}`);
       }
     }
   }

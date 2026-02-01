@@ -227,19 +227,153 @@ export class SoundManager {
   private currentAmbience: string | null = null;
   private currentMusic: string | null = null;
   private enabled: boolean = true;
-  private masterVolume: number = 0.8;
+  private masterVolume: number = 0.5; // Start at 50%
   private effectVolume: number = 0.7;
   private musicVolume: number = 0.5;
+  private audioContext: AudioContext | null = null;
 
   // Initialize sound manager
   init(): void {
+    try {
+      // Create audio context on first user interaction
+      if (!this.audioContext && typeof AudioContext !== 'undefined') {
+        this.audioContext = new AudioContext();
+      }
+    } catch (e) {
+      console.warn('[SoundManager] Web Audio API not available');
+    }
+    
     console.log('[SoundManager] Initialized');
     console.log('[SoundManager] Master Volume:', this.masterVolume);
     console.log('[SoundManager] Effects Volume:', this.effectVolume);
     console.log('[SoundManager] Music Volume:', this.musicVolume);
-    // TODO: Initialize audio context
-    // TODO: Load sound effects
-    // TODO: Load music tracks
+  }
+
+  // Ensure audio context is initialized
+  private ensureAudioContext(): AudioContext | null {
+    if (!this.audioContext && typeof AudioContext !== 'undefined') {
+      try {
+        this.audioContext = new AudioContext();
+      } catch (e) {
+        return null;
+      }
+    }
+    return this.audioContext;
+  }
+
+  // Play a procedural click sound (short blip)
+  private playClickSound(volume: number): void {
+    const ctx = this.ensureAudioContext();
+    if (!ctx) return;
+
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    
+    osc.frequency.value = 800; // High pitch
+    osc.type = 'sine';
+    
+    gain.gain.setValueAtTime(volume * 0.3, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1);
+    
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.1);
+  }
+
+  // Play a procedural build/thud sound
+  private playBuildSound(volume: number): void {
+    const ctx = this.ensureAudioContext();
+    if (!ctx) return;
+
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    
+    osc.frequency.setValueAtTime(120, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(80, ctx.currentTime + 0.3);
+    osc.type = 'sine';
+    
+    gain.gain.setValueAtTime(volume * 0.4, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+    
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.3);
+  }
+
+  // Play a procedural error sound (low buzz)
+  private playErrorSound(volume: number): void {
+    const ctx = this.ensureAudioContext();
+    if (!ctx) return;
+
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    
+    osc.frequency.value = 150; // Low frequency
+    osc.type = 'square';
+    
+    gain.gain.setValueAtTime(volume * 0.25, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.2);
+    
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.2);
+  }
+
+  // Play a procedural success/level-up sound (ascending tones)
+  private playSuccessSound(volume: number): void {
+    const ctx = this.ensureAudioContext();
+    if (!ctx) return;
+
+    const playTone = (freq: number, startTime: number, duration: number) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      
+      osc.frequency.value = freq;
+      osc.type = 'sine';
+      
+      gain.gain.setValueAtTime(volume * 0.2, startTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, startTime + duration);
+      
+      osc.start(startTime);
+      osc.stop(startTime + duration);
+    };
+
+    // Play ascending tones: 440 -> 550 -> 660 Hz
+    const baseTime = ctx.currentTime;
+    playTone(440, baseTime, 0.15);
+    playTone(550, baseTime + 0.15, 0.15);
+    playTone(660, baseTime + 0.3, 0.15);
+  }
+
+  // Play a procedural resource collect sound (soft ding)
+  private playCollectSound(volume: number): void {
+    const ctx = this.ensureAudioContext();
+    if (!ctx) return;
+
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    
+    osc.frequency.setValueAtTime(900, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(600, ctx.currentTime + 0.3);
+    osc.type = 'sine';
+    
+    gain.gain.setValueAtTime(volume * 0.25, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+    
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.3);
   }
 
   // Switch background music based on game state
@@ -288,16 +422,20 @@ export class SoundManager {
     
     switch (action) {
       case 'click':
-        console.log(`[SFX] 🔘 UI Click (volume: ${volume.toFixed(1)})`);
+        this.playClickSound(volume);
+        console.log(`[SFX] 🔘 UI Click (volume: ${volume.toFixed(2)})`);
         break;
       case 'place_building':
-        console.log(`[SFX] 🏗️  Building Placed (volume: ${volume.toFixed(1)})`);
+        this.playBuildSound(volume);
+        console.log(`[SFX] 🏗️  Building Placed (volume: ${volume.toFixed(2)})`);
         break;
       case 'error':
-        console.log(`[SFX] ⚠️  Error Buzz (volume: ${volume.toFixed(1)})`);
+        this.playErrorSound(volume);
+        console.log(`[SFX] ⚠️  Error Buzz (volume: ${volume.toFixed(2)})`);
         break;
       case 'success':
-        console.log(`[SFX] ✅ Success Chime (volume: ${volume.toFixed(1)})`);
+        this.playSuccessSound(volume);
+        console.log(`[SFX] ✅ Success Chime (volume: ${volume.toFixed(2)})`);
         break;
     }
   }
@@ -307,23 +445,8 @@ export class SoundManager {
     if (!this.enabled) return;
     const volume = this.effectVolume * this.masterVolume;
     
-    console.log(`[SFX] 🏭 Production - ${buildingType} (volume: ${volume.toFixed(1)})`);
-    switch (buildingType) {
-      case 'farm':
-        console.log('[SFX] └─ Farm: soil, water sounds');
-        break;
-      case 'mine':
-        console.log('[SFX] └─ Mine: pickaxe striking rock');
-        break;
-      case 'blacksmith':
-        console.log('[SFX] └─ Blacksmith: hammer on anvil');
-        break;
-      case 'market':
-        console.log('[SFX] └─ Market: coins jingling');
-        break;
-      default:
-        console.log(`[SFX] └─ ${buildingType}: generic work sound`);
-    }
+    console.log(`[SFX] 🏭 Production - ${buildingType} (volume: ${volume.toFixed(2)})`);
+    this.playBuildSound(volume * 0.7); // Use build sound for production
   }
 
   // Play celebration sound
@@ -333,13 +456,16 @@ export class SoundManager {
     
     switch (type) {
       case 'fanfare':
-        console.log(`[SFX] 🎺 Fanfare (volume: ${volume.toFixed(1)})`);
+        this.playSuccessSound(volume);
+        console.log(`[SFX] 🎺 Fanfare (volume: ${volume.toFixed(2)})`);
         break;
       case 'quest_complete':
-        console.log(`[SFX] ✨ Quest Complete! (volume: ${volume.toFixed(1)})`);
+        this.playSuccessSound(volume);
+        console.log(`[SFX] ✨ Quest Complete! (volume: ${volume.toFixed(2)})`);
         break;
       case 'level_up':
-        console.log(`[SFX] ⭐ Level Up! (volume: ${volume.toFixed(1)})`);
+        this.playSuccessSound(volume);
+        console.log(`[SFX] ⭐ Level Up! (volume: ${volume.toFixed(2)})`);
         break;
     }
   }
@@ -348,21 +474,30 @@ export class SoundManager {
   playResourceSound(resourceType: string): void {
     if (!this.enabled) return;
     const volume = this.effectVolume * this.masterVolume;
-    console.log(`[SFX] 💰 Resource - ${resourceType} (volume: ${volume.toFixed(1)})`);
+    
+    this.playCollectSound(volume);
+    console.log(`[SFX] 💰 Resource - ${resourceType} (volume: ${volume.toFixed(2)})`);
   }
 
   // Play sound effect with volume control
   playSoundEffect(effectName: string, volume: number = 0.7): void {
     if (!this.enabled) return;
     const finalVolume = volume * this.masterVolume;
+    
+    // Default to click sound for generic effects
+    this.playClickSound(finalVolume);
     console.log(`[SoundManager] 🔊 Playing ${effectName} at volume ${finalVolume.toFixed(2)}`);
-    // TODO: Implement volume control
   }
 
   // Set master volume (0-1)
   setMasterVolume(volume: number): void {
     this.masterVolume = Math.max(0, Math.min(1, volume));
     console.log(`[SoundManager] 🔊 Master Volume: ${(this.masterVolume * 100).toFixed(0)}%`);
+  }
+
+  // Get current master volume
+  getMasterVolume(): number {
+    return this.masterVolume;
   }
 
   // Toggle sound on/off

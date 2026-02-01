@@ -33,7 +33,7 @@ export function createInitialState(seed?: number): GameState {
     exploredAreas: initializeExploredAreas(),
     tutorialStep: 1, // Start tutorial
     visibilityGrid: generateVisibilityGrid(map),
-    discoveredTerritories: new Map(),
+    discoveredTerritories: {},
     settlementLevel: 1,
     lastSettlementLevel: 1,
     mapSeed: usedSeed,  // Store seed for display and sharing
@@ -42,15 +42,16 @@ export function createInitialState(seed?: number): GameState {
 
 /**
  * Initialize explored areas with starting visible region
+ * Returns an array instead of Set for JSON serialization
  */
-function initializeExploredAreas(): Set<string> {
-  const explored = new Set<string>();
+function initializeExploredAreas(): string[] {
+  const explored: string[] = [];
   const startCenterX = STARTING_X + Math.floor(INITIAL_VISIBLE_WIDTH / 2);
   const startCenterY = STARTING_Y + Math.floor(INITIAL_VISIBLE_HEIGHT / 2);
   
   for (let y = STARTING_Y; y < STARTING_Y + INITIAL_VISIBLE_HEIGHT; y++) {
     for (let x = STARTING_X; x < STARTING_X + INITIAL_VISIBLE_WIDTH; x++) {
-      explored.add(`${x},${y}`);
+      explored.push(`${x},${y}`);
     }
   }
   return explored;

@@ -144,7 +144,7 @@ function generateRiverSystems(
     }
     
     // Carve river from mountain to edge
-    carvRiver(startX, startY, map, rng, mountainGrid);
+    carvRiver(startX, startY, map, rng, mountainGrid, 0);
   }
 }
 
@@ -156,8 +156,14 @@ function carvRiver(
   startY: number,
   map: Tile[][],
   rng: SeededRandom,
-  mountainGrid: number[][]
+  mountainGrid: number[][],
+  depth: number = 0
 ): void {
+  // Limit recursion depth to prevent stack overflow
+  const MAX_DEPTH = 3;
+  if (depth >= MAX_DEPTH) {
+    return;
+  }
   let x = startX;
   let y = startY;
   let lastX = x;
@@ -215,6 +221,11 @@ function carvRiver(
       }
     }
     
+    // If no valid move found, end the river (dead end)
+    if (bestDir.score === -Infinity) {
+      break;
+    }
+    
     lastX = x;
     lastY = y;
     x += bestDir.x;
@@ -229,7 +240,7 @@ function carvRiver(
     
     // Occasional river branching
     if (steps > 5 && rng.next() < 0.1) {
-      carvRiver(x, y, map, rng, mountainGrid);
+      carvRiver(x, y, map, rng, mountainGrid, depth + 1);
     }
   }
 }

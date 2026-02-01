@@ -208,7 +208,7 @@ export function checkObjectiveComplete(
       for (let x = area.x - area.radius; x <= area.x + area.radius; x++) {
         for (let y = area.y - area.radius; y <= area.y + area.radius; y++) {
           const key = `${x},${y}`;
-          if (!state.exploredAreas.has(key)) return false;
+          if (!state.exploredAreas.includes(key)) return false;
         }
       }
       return true;
