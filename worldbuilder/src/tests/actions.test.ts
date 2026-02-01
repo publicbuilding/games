@@ -78,8 +78,8 @@ describe('Building Placement Validation', () => {
     let found = false;
     for (let y = 0; y < state.map.length; y++) {
       for (let x = 0; x < state.map[y].length; x++) {
-        if (state.map[y][x].type === 'plains') {
-          const result = placeBuilding(state, 'jadeMine', x, y);
+        if (state.map[y][x].type === 'plains' && !state.map[y][x].building) {
+          const result = placeBuilding(state, 'ricePaddy', x, y);
           expect(result.success).toBe(false);
           expect(result.message).toContain('resources');
           found = true;
