@@ -5,7 +5,7 @@ const MAP_HEIGHT = 15;
 
 export function createInitialState(): GameState {
   return {
-    resources: { rice: 100, tea: 50, silk: 0, jade: 0, iron: 0, bamboo: 50, gold: 200 },
+    resources: { rice: 150, tea: 50, silk: 0, jade: 0, iron: 0, bamboo: 50, gold: 200 },
     maxResources: { rice: 300, tea: 200, silk: 100, jade: 150, iron: 200, bamboo: 300, gold: 500 },
     population: 8,
     maxPopulation: 8,
