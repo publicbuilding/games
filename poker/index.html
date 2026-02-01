@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="description" content="Texas Hold'em Poker - Play against AI opponents">
+  <meta name="theme-color" content="#1a472a">
+  <title>Texas Hold'em Poker</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      color: white;
+      overflow-x: hidden;
+    }
+    
+    header {
+      width: 100%;
+      padding: 15px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(0, 0, 0, 0.3);
+      border-bottom: 1px solid rgba(255, 215, 0, 0.2);
+    }
+    
+    .logo {
+      font-size: 20px;
+      font-weight: bold;
+      color: #ffd700;
+      text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+    }
+    
+    .header-buttons {
+      display: flex;
+      gap: 10px;
+    }
+    
+    .header-btn {
+      padding: 8px 16px;
+      border: 1px solid rgba(255, 215, 0, 0.5);
+      background: rgba(255, 215, 0, 0.1);
+      color: #ffd700;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 13px;
+      transition: all 0.2s;
+    }
+    
+    .header-btn:hover {
+      background: rgba(255, 215, 0, 0.2);
+      transform: translateY(-1px);
+    }
+    
+    .header-btn.primary {
+      background: linear-gradient(135deg, #ffd700 0%, #ff8c00 100%);
+      color: #1a1a2e;
+      border: none;
+      font-weight: bold;
+    }
+    
+    .header-btn.primary:hover {
+      box-shadow: 0 4px 15px rgba(255, 215, 0, 0.4);
+    }
+    
+    #game-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      width: 100%;
+      max-width: 920px;
+    }
+    
+    #game-canvas {
+      border-radius: 15px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+      touch-action: manipulation;
+      max-width: 100%;
+    }
+    
+    .status-bar {
+      width: 100%;
+      padding: 15px 20px;
+      background: rgba(0, 0, 0, 0.3);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    #status-text {
+      color: #aaa;
+      font-size: 14px;
+    }
+    
+    #player-chips {
+      color: #ffd700;
+      font-weight: bold;
+      font-size: 16px;
+    }
+    
+    .keyboard-hints {
+      display: flex;
+      gap: 15px;
+      flex-wrap: wrap;
+      justify-content: center;
+      padding: 10px;
+      color: #666;
+      font-size: 12px;
+    }
+    
+    .key-hint {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    
+    .key {
+      background: rgba(255, 255, 255, 0.1);
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-family: monospace;
+      color: #888;
+    }
+    
+    @media (max-width: 600px) {
+      header {
+        flex-direction: column;
+        gap: 10px;
+        padding: 10px;
+      }
+      
+      .header-buttons {
+        width: 100%;
+        justify-content: center;
+        flex-wrap: wrap;
+      }
+      
+      .header-btn {
+        padding: 6px 12px;
+        font-size: 12px;
+      }
+      
+      #game-container {
+        padding: 10px;
+      }
+      
+      .keyboard-hints {
+        display: none;
+      }
+    }
+    
+    /* PWA install prompt styling */
+    .install-prompt {
+      display: none;
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: linear-gradient(135deg, #ffd700 0%, #ff8c00 100%);
+      color: #1a1a2e;
+      padding: 12px 24px;
+      border-radius: 30px;
+      cursor: pointer;
+      font-weight: bold;
+      box-shadow: 0 4px 20px rgba(255, 215, 0, 0.4);
+      z-index: 100;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo">♠ Texas Hold'em ♥</div>
+    <div class="header-buttons">
+      <button class="header-btn primary" id="deal-btn">Deal</button>
+      <button class="header-btn" id="history-btn">History</button>
+      <button class="header-btn" id="tournament-btn">🏆 Tournaments</button>
+      <button class="header-btn" id="store-btn">💰 Chips</button>
+    </div>
+  </header>
+  
+  <div id="game-container">
+    <canvas id="game-canvas"></canvas>
+  </div>
+  
+  <div class="status-bar">
+    <span id="status-text">Click Deal to start</span>
+    <span id="player-chips">Your Chips: $1,000</span>
+  </div>
+  
+  <div class="keyboard-hints">
+    <span class="key-hint"><span class="key">F</span> Fold</span>
+    <span class="key-hint"><span class="key">C</span> Check/Call</span>
+    <span class="key-hint"><span class="key">R</span> Raise</span>
+    <span class="key-hint"><span class="key">A</span> All-In</span>
+    <span class="key-hint"><span class="key">D</span> Deal</span>
+  </div>
+  
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>

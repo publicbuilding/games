@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>World Builder - Anno-style City Game</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏰</text></svg>">
+</head>
+<body>
+  <div id="app">
+    <canvas id="game-canvas"></canvas>
+    
+    <!-- UI Overlay - Right side buttons -->
+    <div id="ui-overlay">
+      <button id="btn-save" class="ui-btn success">💾 Save</button>
+      <button id="btn-premium" class="ui-btn premium">💎 Shop</button>
+      <button id="btn-reset" class="ui-btn warning">🔄 Reset</button>
+    </div>
+
+    <!-- Market Panel - Left side -->
+    <div id="market-panel">
+      <h3>🏪 Market</h3>
+      <div class="market-row">
+        <span>🪵 Wood: 5g</span>
+        <button id="btn-sell-wood" class="market-btn">Sell 10</button>
+      </div>
+      <div class="market-row">
+        <span>🪨 Stone: 8g</span>
+        <button id="btn-sell-stone" class="market-btn">Sell 10</button>
+      </div>
+      <div class="market-row">
+        <span>🍎 Food: 3g</span>
+        <button id="btn-sell-food" class="market-btn">Sell 10</button>
+      </div>
+    </div>
+
+    <!-- Premium Modal -->
+    <div id="premium-modal">
+      <div class="modal-content">
+        <h2>💎 Gem Shop</h2>
+        <p>Gems unlock premium buildings and speed boosts!<br>
+        ⭐ Auto Factory: Produces gold automatically<br>
+        ⭐ Mansion: Houses 12 people<br>
+        ⚡ Speed Boosts: 2x production for 60s</p>
+        
+        <div class="gem-packages">
+          <div class="gem-package" id="btn-buy-gems">
+            <div class="amount">💎 100</div>
+            <div class="price">$0.99 (mock)</div>
+          </div>
+          <div class="gem-package">
+            <div class="amount">💎 500</div>
+            <div class="price">$3.99</div>
+          </div>
+          <div class="gem-package">
+            <div class="amount">💎 1200</div>
+            <div class="price">$7.99</div>
+          </div>
+        </div>
+        
+        <button id="modal-close" class="modal-close">Close</button>
+      </div>
+    </div>
+  </div>
+  
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
