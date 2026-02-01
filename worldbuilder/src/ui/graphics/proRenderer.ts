@@ -17,6 +17,7 @@ import { CharacterPolishRenderer, type CharacterType } from './characterPolishRe
 import { UIPolish } from './uiPolish';
 import { WeatherAndSeasons, type WeatherState } from './weatherAndSeasons';
 import { CameraAndPostProcessing } from './cameraAndPostProcessing';
+import { PremiumEffects } from './premiumEffects';
 import { getCurrentSettlementLevel, getLevelProgress, SETTLEMENT_LEVELS } from '../../core/progression';
 import { floatingNumberSystem } from '../feedback/floatingNumbers';
 import { celebrationSystem } from '../feedback/celebrations';
@@ -78,11 +79,20 @@ export class ProRenderer {
   private spriteGenerator: SpriteGenerator;
   private isometricRenderer: IsometricRenderer;
   private animationSystem: AnimationSystem;
+  private atmosphericEffects: AtmosphericEffects;
+  private waterAndNatureEffects: WaterAndNatureEffects;
+  private buildingDetailsRenderer: BuildingDetailsRenderer;
+  private characterPolishRenderer: CharacterPolishRenderer;
+  private uiPolish: UIPolish;
+  private weatherAndSeasons: WeatherAndSeasons;
+  private cameraAndPostProcessing: CameraAndPostProcessing;
+  private premiumEffects: PremiumEffects;
   private animationFrameCount: number = 0;
-  private buildingAnimations: Map<string, string> = new Map(); // Map building ID to animation ID
-  private characterAnimations: Map<string, string> = new Map(); // Map character to animation
+  private buildingAnimations: Map<string, string> = new Map();
+  private characterAnimations: Map<string, string> = new Map();
   private showGridOverlay: boolean = false;
   private hoveredTile: { x: number; y: number } | null = null;
+  private weatherState: WeatherState = { type: 'clear', intensity: 0, season: 'spring', temperature: 20 };
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -90,6 +100,14 @@ export class ProRenderer {
     this.spriteGenerator = new SpriteGenerator();
     this.isometricRenderer = new IsometricRenderer();
     this.animationSystem = new AnimationSystem();
+    this.atmosphericEffects = new AtmosphericEffects();
+    this.waterAndNatureEffects = new WaterAndNatureEffects();
+    this.buildingDetailsRenderer = new BuildingDetailsRenderer();
+    this.characterPolishRenderer = new CharacterPolishRenderer();
+    this.uiPolish = new UIPolish();
+    this.weatherAndSeasons = new WeatherAndSeasons();
+    this.cameraAndPostProcessing = new CameraAndPostProcessing();
+    this.premiumEffects = new PremiumEffects();
     this.setupCanvas();
     window.addEventListener('resize', () => this.setupCanvas());
     
@@ -112,36 +130,79 @@ export class ProRenderer {
   }
 
   /**
-   * Main render function
+   * Main render function with AAA visual polish
    */
   render(state: GameState, ui: UIState): void {
     this.animationFrameCount++;
     const { width, height } = this.canvas.getBoundingClientRect();
     const ctx = this.ctx;
 
-    // Update animations
-    this.animationSystem.updateAnimations(16); // Assume 60fps (16ms per frame)
+    // Update animations and effects
+    this.animationSystem.updateAnimations(16);
+    this.cameraAndPostProcessing.updateCamera(16);
 
-    // Clear canvas with gradient background (day/night cycle)
-    const dayBrightness = Math.sin(state.dayTime * Math.PI) * 0.15 + 0.3;
-    const bgColor = `rgba(${40 + dayBrightness * 30}, ${40 + dayBrightness * 30}, ${50 + dayBrightness * 50}, 1)`;
+    // Get ambient light from atmospheric effects
+    const ambientLight = this.atmosphericEffects.getAmbientLightColor(state.dayTime);
+    const bgColor = `rgba(${ambientLight.r}, ${ambientLight.g}, ${ambientLight.b}, 1)`;
+    
     ctx.fillStyle = bgColor;
     ctx.fillRect(0, 0, width, height);
 
+    // Draw celestial body (sun/moon)
+    this.atmosphericEffects.drawCelestialBody(ctx, width, height, state.dayTime);
+
+    // Add sun flare during daytime
+    if (state.dayTime > 0.2 && state.dayTime < 0.8) {
+      const sunIntensity = Math.sin(state.dayTime * Math.PI) * 0.6;
+      const sunX = width * 0.2 + (state.dayTime * 0.6) * width;
+      const sunY = height * 0.2 + Math.sin(state.dayTime * Math.PI) * height * 0.15;
+      this.premiumEffects.drawSunFlare(ctx, sunX, sunY, sunIntensity);
+    }
+
+    // Draw god rays
+    this.atmosphericEffects.drawGodRays(ctx, width, height, state.dayTime, this.animationFrameCount);
+
+    // Apply volumetric fog
+    this.atmosphericEffects.applyVolumetricFog(ctx, width, height, state.dayTime);
+
+    // Draw dust motes
+    this.atmosphericEffects.drawDustMotes(ctx, state.dayTime, this.animationFrameCount);
+
+    // Apply atmospheric perspective (distant haze)
+    this.premiumEffects.applyAtmosphericPerspective(ctx, width, height, 0.12);
+
+    // Apply seasonal tinting
+    this.weatherAndSeasons.applySeasonalTint(ctx, this.weatherState.season, width, height);
+
     ctx.save();
 
-    // Apply camera transform
+    // Apply camera transform with easing
+    const camera = this.cameraAndPostProcessing.getCameraWithShake();
     ctx.translate(width / 2, height / 2);
-    ctx.scale(ui.zoom, ui.zoom);
-    ctx.translate(-ui.cameraX, -ui.cameraY);
+    ctx.scale(camera.zoom, camera.zoom);
+    ctx.translate(-camera.x, -camera.y);
 
     // Render layers in order
     this.renderMap(state, ui);
+    this.renderWaterAndNature(state, ui);
     this.renderBuildings(state, ui);
     this.renderCharacters(state, ui);
     this.renderParticles(ctx, ui);
 
     ctx.restore();
+
+    // Weather effects (rain, snow, leaves)
+    this.drawWeatherEffects(ctx, width, height);
+
+    // Post-processing effects
+    this.atmosphericEffects.applyAmbientOcclusion(ctx, width, height, 0.25); // Slightly stronger AO
+    
+    // Enhanced vignette for cinematic feel
+    const vignetteStrength = 0.35 + Math.sin(state.dayTime * Math.PI) * 0.1;
+    this.cameraAndPostProcessing.applyVignette(ctx, width, height, vignetteStrength);
+    
+    // Subtle depth of field
+    this.cameraAndPostProcessing.applyDepthOfField(ctx, width, height, 0.15);
 
     // Render UI overlay
     this.renderUI(state, ui, width, height);
@@ -238,6 +299,59 @@ export class ProRenderer {
   }
 
   /**
+   * Render water and nature effects (before buildings for proper layering)
+   */
+  private renderWaterAndNature(state: GameState, ui: UIState): void {
+    const ctx = this.ctx;
+
+    // Draw water reflections and ripples
+    for (let y = 0; y < state.map.length; y++) {
+      for (let x = 0; x < state.map[y].length; x++) {
+        const tile = state.map[y][x];
+        if (tile.type === 'river') {
+          const pos = this.isometricRenderer.gridToIsometric(tile.x, tile.y, 0);
+          this.waterAndNatureEffects.drawWaterWithReflections(
+            ctx,
+            pos.screenX,
+            pos.screenY,
+            48,
+            24,
+            this.animationFrameCount
+          );
+        }
+      }
+    }
+
+    // Draw seasonal effects
+    if (this.weatherState.season === 'spring') {
+      this.waterAndNatureEffects.drawCherryBlossoms(
+        ctx,
+        this.canvas.getBoundingClientRect().width,
+        this.canvas.getBoundingClientRect().height,
+        'spring',
+        this.animationFrameCount
+      );
+    }
+
+    // Draw fireflies at night
+    this.waterAndNatureEffects.drawFireflies(
+      ctx,
+      this.canvas.getBoundingClientRect().width,
+      this.canvas.getBoundingClientRect().height,
+      state.dayTime,
+      this.animationFrameCount
+    );
+
+    // Draw birds
+    this.waterAndNatureEffects.drawBirds(
+      ctx,
+      this.canvas.getBoundingClientRect().width,
+      this.canvas.getBoundingClientRect().height,
+      this.animationFrameCount
+    );
+  }
+
+  /**
    * Render buildings
    */
   private renderBuildings(state: GameState, ui: UIState): void {
@@ -264,6 +378,9 @@ export class ProRenderer {
     const def = getBuildingDef(building.type);
     const buildingHeight = 30 + Math.random() * 10; // Vary heights slightly
 
+    // Draw dynamic shadow based on time of day
+    this.atmosphericEffects.drawDynamicShadow(ctx, pos.screenX, pos.screenY, 20, buildingHeight, state.dayTime);
+
     // Draw building with 3D effect
     this.isometricRenderer.drawIsometricBuilding(
       ctx,
@@ -275,6 +392,84 @@ export class ProRenderer {
       palette.primary
     );
 
+    // Draw building details (roof tiles, lanterns, etc.)
+    this.buildingDetailsRenderer.drawRoofTiles(
+      ctx,
+      pos.screenX,
+      pos.screenY,
+      20,
+      buildingHeight * 0.6,
+      palette.roof
+    );
+
+    // Draw window glow at night
+    this.buildingDetailsRenderer.drawWindowGlow(
+      ctx,
+      pos.screenX,
+      pos.screenY,
+      20,
+      buildingHeight,
+      state.dayTime
+    );
+
+    // Add light bloom to glowing windows
+    const nightness = (state.dayTime > 0.75 || state.dayTime < 0.25) ? 1 - Math.abs(state.dayTime - (state.dayTime < 0.5 ? 0 : 1)) : 0;
+    if (nightness > 0.3) {
+      // Window glow bloom positions
+      const windowPositions = [
+        { x: -buildingHeight / 3, y: -buildingHeight / 3 },
+        { x: 0, y: -buildingHeight / 3 },
+        { x: buildingHeight / 3, y: -buildingHeight / 3 },
+      ];
+      for (const windowPos of windowPositions) {
+        this.premiumEffects.drawLightBloom(
+          ctx,
+          pos.screenX + windowPos.x,
+          pos.screenY + windowPos.y,
+          15,
+          nightness * 0.5,
+          'rgba(255, 200, 100, '
+        );
+      }
+    }
+
+    // Draw hanging lanterns on larger buildings
+    if (buildingHeight > 25) {
+      const lanternPositions = [
+        { x: -8, y: -5 },
+        { x: 8, y: -5 },
+        { x: -10, y: 5 },
+        { x: 10, y: 5 },
+      ];
+      this.buildingDetailsRenderer.drawHangingLanterns(
+        ctx,
+        pos.screenX,
+        pos.screenY,
+        lanternPositions,
+        state.dayTime,
+        this.animationFrameCount
+      );
+
+      // Add light bloom to lanterns at night
+      if (state.dayTime > 0.7 || state.dayTime < 0.3) {
+        for (const lanternPos of lanternPositions) {
+          const lanternScreenX = pos.screenX + lanternPos.x;
+          const lanternScreenY = pos.screenY + lanternPos.y;
+          this.premiumEffects.drawLightBloom(
+            ctx,
+            lanternScreenX,
+            lanternScreenY,
+            25,
+            0.6,
+            'rgba(255, 180, 80, '
+          );
+        }
+      }
+    }
+
+    // Draw stone foundation
+    this.buildingDetailsRenderer.drawStoneFoundation(ctx, pos.screenX, pos.screenY + buildingHeight * 0.5, 20);
+
     // Add construction progress indicator
     if (building.constructionProgress !== undefined && building.constructionProgress < 1) {
       const progress = Math.floor(building.constructionProgress * 100);
@@ -283,15 +478,45 @@ export class ProRenderer {
       ctx.textAlign = 'center';
       ctx.fillText(`${progress}%`, pos.screenX, pos.screenY - 40);
 
+      // Draw construction scaffolding
+      this.buildingDetailsRenderer.drawConstructionScaffolding(
+        ctx,
+        pos.screenX,
+        pos.screenY,
+        20,
+        buildingHeight,
+        building.constructionProgress
+      );
+
       // Emit construction dust
-      if (Math.random() < 0.05) {
-        this.animationSystem.emitDust(pos.screenX, pos.screenY - 15, 3, 'rgba(180, 160, 140, 0.4)');
+      if (Math.random() < 0.08) {
+        this.animationSystem.emitDust(pos.screenX, pos.screenY - 15, 4, 'rgba(180, 160, 140, 0.5)');
       }
     }
 
-    // Add working indicator (smoke)
-    if (def.production && (this.animationFrameCount % 30 === 0)) {
-      this.animationSystem.emitSmoke(pos.screenX, pos.screenY - 20, 2, 'rgba(200, 200, 200, 0.5)');
+    // Add working indicator (enhanced smoke physics)
+    if (def.production && building.constructionProgress === undefined) {
+      if (this.animationFrameCount % 25 === 0) {
+        // Emit smoke with better physics
+        for (let i = 0; i < 2; i++) {
+          const offsetX = (Math.random() - 0.5) * 4;
+          const offsetY = Math.random() * -3;
+          this.animationSystem.emitSmoke(
+            pos.screenX + offsetX,
+            pos.screenY - 20 + offsetY,
+            3,
+            'rgba(220, 220, 220, 0.6)'
+          );
+        }
+      }
+
+      // Draw chimney with smoke
+      this.buildingDetailsRenderer.drawChimneyWithSmoke(
+        ctx,
+        pos.screenX + 8,
+        pos.screenY - buildingHeight * 0.3,
+        this.animationFrameCount
+      );
     }
 
     // Draw building icon/indicator
@@ -300,6 +525,21 @@ export class ProRenderer {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(this.getBuildingSymbol(building.type), pos.screenX, pos.screenY - 5);
+
+    // Draw decorative flags on castle/temple
+    if ((building.type === 'castle' || building.type === 'temple' || building.type === 'dojo') && buildingHeight > 28) {
+      const flagPositions = [
+        { x: -12, y: -buildingHeight * 0.4, size: 'large' as const },
+        { x: 12, y: -buildingHeight * 0.35, size: 'small' as const },
+      ];
+      this.buildingDetailsRenderer.drawFlags(
+        ctx,
+        pos.screenX,
+        pos.screenY,
+        flagPositions,
+        this.animationFrameCount
+      );
+    }
 
     // Worker count indicator
     if (def.workers > 0) {
@@ -366,38 +606,59 @@ export class ProRenderer {
   private renderUI(state: GameState, ui: UIState, width: number, height: number): void {
     const ctx = this.ctx;
 
-    // Semi-transparent background for UI elements (expanded for settlement level)
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-    ctx.fillRect(0, 0, width, 105);
+    // Draw Sekiro-inspired background panel with paper texture
+    const panelHeight = 110;
+    this.uiPolish.drawPanelWithBrushBorder(
+      ctx,
+      { x: 0, y: 0, width: width, height: panelHeight },
+      'rgba(245, 237, 220, 0.85)',
+      '#1a1a1a'
+    );
+    
+    // Alternative: Semi-transparent background for UI elements (expanded for settlement level)
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+    ctx.fillRect(0, 0, width, panelHeight);
 
     // Settlement level and progress bar
     this.renderSettlementLevelBar(state, ctx, width);
 
-    // Resources
-    ctx.font = 'bold 14px sans-serif';
-    ctx.fillStyle = '#fff';
+    // Resources with enhanced styling
+    ctx.font = 'bold 13px Georgia, serif';
+    ctx.fillStyle = '#1a1a1a';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
 
     const resources = [
-      { icon: '🌾', label: 'Rice', value: Math.floor(state.resources.rice) },
-      { icon: '🫖', label: 'Tea', value: Math.floor(state.resources.tea) },
-      { icon: '🪡', label: 'Silk', value: Math.floor(state.resources.silk) },
-      { icon: '💎', label: 'Jade', value: Math.floor(state.resources.jade) },
-      { icon: '🔨', label: 'Iron', value: Math.floor(state.resources.iron) },
-      { icon: '🎋', label: 'Bamboo', value: Math.floor(state.resources.bamboo) },
-      { icon: '💰', label: 'Gold', value: Math.floor(state.resources.gold) },
+      { icon: '🌾', label: 'Rice', value: Math.floor(state.resources.rice), color: '#d4a574' },
+      { icon: '🫖', label: 'Tea', value: Math.floor(state.resources.tea), color: '#6b9d3e' },
+      { icon: '🪡', label: 'Silk', value: Math.floor(state.resources.silk), color: '#d4a5a5' },
+      { icon: '💎', label: 'Jade', value: Math.floor(state.resources.jade), color: '#696969' },
+      { icon: '⛏️', label: 'Iron', value: Math.floor(state.resources.iron), color: '#555555' },
+      { icon: '🎋', label: 'Bamboo', value: Math.floor(state.resources.bamboo), color: '#7db542' },
+      { icon: '💰', label: 'Gold', value: Math.floor(state.resources.gold), color: '#ffd700' },
     ];
 
     let x = 10;
     for (const res of resources) {
-      ctx.fillText(`${res.icon} ${res.value}`, x, 50);
-      x += 120;
+      // Draw resource box with color accent
+      ctx.fillStyle = `${res.color}40`; // Transparent tint
+      ctx.fillRect(x, 48, 110, 20);
+      
+      ctx.strokeStyle = res.color;
+      ctx.lineWidth = 1;
+      ctx.strokeRect(x, 48, 110, 20);
+      
+      // Resource text
+      ctx.fillStyle = '#1a1a1a';
+      ctx.fillText(`${res.icon} ${res.value}`, x + 5, 53);
+      x += 115;
       if (x > width - 100) break; // Don't overflow
     }
 
-    // Population info
-    ctx.fillText(`👥 Pop: ${state.population}/${state.maxPopulation}`, 10, 72);
+    // Population info with styled display
+    ctx.fillStyle = '#1a1a1a';
+    ctx.font = 'bold 13px Georgia, serif';
+    ctx.fillText(`👥 Population: ${state.population}/${state.maxPopulation}`, 10, 78);
 
     // Render notifications
     this.renderNotifications(ctx, width, height);
@@ -585,12 +846,18 @@ export class ProRenderer {
     const mapHeight = state.map.length || 30;
     const tileSize = miniMapSize / Math.max(mapWidth, mapHeight);
 
-    // Background
-    ctx.fillStyle = 'rgba(20, 20, 30, 0.8)';
-    ctx.strokeStyle = 'rgba(100, 150, 255, 0.6)';
-    ctx.lineWidth = 2;
+    // Draw panel with brush border
+    ctx.fillStyle = 'rgba(20, 20, 30, 0.9)';
     ctx.fillRect(miniMapX, miniMapY, miniMapSize, miniMapSize);
-    ctx.strokeRect(miniMapX, miniMapY, miniMapSize, miniMapSize);
+    
+    // Sekiro-style border
+    this.uiPolish.drawBrushStrokeBorder(ctx, miniMapX, miniMapY, miniMapSize, miniMapSize, 'rgba(100, 150, 255, 0.8)', 1.5);
+    
+    // Label
+    ctx.fillStyle = 'rgba(100, 150, 255, 0.8)';
+    ctx.font = 'bold 10px Georgia, serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('MAP', miniMapX + miniMapSize / 2, miniMapY - 8);
 
     // Draw explored areas
     for (let y = 0; y < mapHeight; y++) {
