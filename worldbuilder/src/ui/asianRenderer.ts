@@ -374,6 +374,9 @@ export class AsianRenderer {
     // Top-right: Season and time indicator
     this.renderTimeInfo(state, width, height);
 
+    // Top-left: Quest indicator
+    this.renderQuestIndicator(state, width, height);
+
     // Notification
     if (ui.notification) {
       this.renderNotification(ctx, ui.notification, width, height);
@@ -561,6 +564,43 @@ export class AsianRenderer {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(message, x + boxWidth / 2, y + boxHeight / 2);
+  }
+
+  private renderQuestIndicator(state: any, width: number, height: number): void {
+    const ctx = this.ctx;
+    const activeQuests = state.quests?.filter((q: any) => q.status === 'active') || [];
+
+    if (activeQuests.length === 0) return;
+
+    // Show first active quest in top-left
+    const quest = activeQuests[0];
+    const boxWidth = 200;
+    const boxHeight = 60;
+    const x = 10;
+    const y = 10;
+
+    ctx.fillStyle = '#f5f1e8';
+    ctx.fillRect(x, y, boxWidth, boxHeight);
+
+    ctx.strokeStyle = '#c41e3a';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(x, y, boxWidth, boxHeight);
+
+    ctx.fillStyle = '#2c2c2c';
+    ctx.font = 'bold 12px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    ctx.fillText(quest.name, x + 8, y + 6);
+
+    // Progress bar
+    ctx.fillStyle = '#e0e0e0';
+    ctx.fillRect(x + 8, y + 26, 184, 6);
+    ctx.fillStyle = '#2ecc71';
+    ctx.fillRect(x + 8, y + 26, 184 * quest.progress, 6);
+
+    ctx.font = '10px sans-serif';
+    ctx.fillStyle = '#666';
+    ctx.fillText(`${Math.round(quest.progress * 100)}%`, x + 100, y + 42);
   }
 
   private canAffordQuick(state: GameState, type: BuildingType): boolean {

@@ -1,5 +1,6 @@
 import { GameState, Building, Tile, TileType, Particle } from '../types';
 import { getBuildingDef, BUILDINGS } from './buildings';
+import { updateQuestProgress } from './quests';
 
 const RICE_CONSUMPTION_RATE = 0.3; // Rice per person per second
 const MIN_RICE_FOR_GROWTH = 30;
@@ -264,6 +265,7 @@ export function gameTick(state: GameState): void {
   processProduction(state, deltaSeconds);
   processPopulation(state, deltaSeconds);
   updateParticles(state, deltaSeconds);
+  updateQuestProgress(state);
 
   // Update timing
   state.lastUpdate = now;

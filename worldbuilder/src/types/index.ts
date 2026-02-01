@@ -80,6 +80,35 @@ export interface Particle {
   color?: string;
 }
 
+// Quest system
+export type QuestType = 'explore' | 'build' | 'trade' | 'population' | 'defense' | 'culture';
+export type QuestStatus = 'available' | 'active' | 'completed' | 'failed';
+
+export interface QuestObjective {
+  type: 'buildBuilding' | 'gatherResource' | 'reachPopulation' | 'exploreArea' | 'establishTrade' | 'defendAttack' | 'buildTemple';
+  buildingType?: BuildingType;
+  resourceType?: ResourceType;
+  targetAmount?: number;
+  targetArea?: { x: number; y: number; radius: number };
+  description: string;
+}
+
+export interface Quest {
+  id: string;
+  name: string;
+  description: string;
+  type: QuestType;
+  status: QuestStatus;
+  objectives: QuestObjective[];
+  reward: {
+    gold: number;
+    resources?: Partial<Resources>;
+    population?: number;
+  };
+  timeLimit?: number; // milliseconds, undefined = no limit
+  progress: number; // 0-1
+}
+
 // Game state
 export interface GameState {
   resources: Resources;
@@ -97,6 +126,10 @@ export interface GameState {
   premiumCurrency: number; // Gems
   season: 'spring' | 'summer' | 'autumn' | 'winter'; // For seasonal changes
   dayTime: number; // 0-1, for day/night cycle
+  quests: Quest[]; // Active and completed quests
+  completedQuests: string[]; // Quest IDs that have been completed
+  exploredAreas: Set<string>; // Map coordinates explored
+  tutorialStep: number; // 0 = none, >0 = tutorial in progress
 }
 
 // UI state

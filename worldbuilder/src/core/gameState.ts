@@ -20,6 +20,10 @@ export function createInitialState(): GameState {
     premiumCurrency: 10,
     season: 'spring',
     dayTime: 0.5, // Start at midday
+    quests: [],
+    completedQuests: [],
+    exploredAreas: new Set(),
+    tutorialStep: 1, // Start tutorial
   };
 }
 
