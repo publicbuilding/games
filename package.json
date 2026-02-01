@@ -12,7 +12,7 @@
     "dev:snake": "npm run dev --workspace=snake",
     "dev:poker": "npm run dev --workspace=poker",
     "dev:worldbuilder": "npm run dev --workspace=worldbuilder",
-    "build": "npm run build --workspaces",
+    "build": "npm run build --workspace=worldbuilder",
     "test": "npm run test --workspaces --if-present"
   },
   "author": "publicbuilding",
