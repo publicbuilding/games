@@ -6,8 +6,7 @@
   "workspaces": [
     "snake",
     "poker",
-    "worldbuilder",
-    "shared"
+    "worldbuilder"
   ],
   "scripts": {
     "dev:snake": "npm run dev --workspace=snake",
