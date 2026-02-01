@@ -86,6 +86,11 @@ class Game {
       this.showNotification(result.message);
     });
 
+    document.getElementById('btn-sell-jade')?.addEventListener('click', () => {
+      const result = sellResource(this.state, 'jade', 5);
+      this.showNotification(result.message);
+    });
+
     // Premium modal
     document.getElementById('btn-premium')?.addEventListener('click', () => {
       this.showPremiumModal();

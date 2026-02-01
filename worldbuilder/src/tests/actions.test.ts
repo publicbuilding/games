@@ -378,8 +378,8 @@ describe('Market Trading', () => {
 
     expect(result.success).toBe(true);
     expect(state.resources.rice).toBe(initialRice - 10);
-    // Rice sells for 2g each
-    expect(state.resources.gold).toBe(initialGold + 20);
+    // Rice sells for 1g each (basic food)
+    expect(state.resources.gold).toBe(initialGold + 10);
   });
 
   it('should not allow selling gold', () => {
@@ -424,7 +424,7 @@ describe('Market Trading', () => {
 
     expect(result.success).toBe(true);
     expect(state.resources.rice).toBe(0);
-    expect(state.resources.gold).toBe(initialGold + 10); // 5 * 2g
+    expect(state.resources.gold).toBe(initialGold + 5); // 5 * 1g
   });
 });
 

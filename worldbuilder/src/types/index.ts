@@ -23,8 +23,18 @@ export interface Tile {
   animationPhase?: number; // For water/forest animation
 }
 
-// Building types - Asian themed (phase 1 initial set)
-export type BuildingType = 'ricePaddy' | 'teaPlantation' | 'silkFarm' | 'jadeMine' | 'blacksmith' | 'house' | 'temple' | 'market' | 'warehouse' | 'dojo';
+// Building types - Asian themed (phase 2: expanded)
+export type BuildingType = 
+  // Agriculture
+  'ricePaddy' | 'teaPlantation' | 'silkFarm' | 'fishingDock' | 
+  // Resources
+  'jadeMine' | 'ironMine' | 'bambooGrove' |
+  // Production & Crafting
+  'blacksmith' | 'teaHouse' | 'market' | 'warehouse' |
+  // Military & Defense
+  'watchtower' | 'dojo' | 'castle' |
+  // Cultural & Residential
+  'house' | 'temple' | 'inn' | 'harbor' | 'shipyard';
 
 export interface BuildingDefinition {
   type: BuildingType;
