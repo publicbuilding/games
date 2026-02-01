@@ -1,4 +1,5 @@
 import { GameState, Tile, TileType, Resources, Building, BuildingType } from '../types';
+import { generateIntelligentMap } from './mapGeneration';
 
 const MAP_WIDTH = 40;  // Expanded map for exploration
 const MAP_HEIGHT = 30;
@@ -7,17 +8,17 @@ const INITIAL_VISIBLE_HEIGHT = 20;
 const STARTING_X = Math.floor(MAP_WIDTH / 2) - Math.floor(INITIAL_VISIBLE_WIDTH / 2);
 const STARTING_Y = Math.floor(MAP_HEIGHT / 2) - Math.floor(INITIAL_VISIBLE_HEIGHT / 2);
 
-export function createInitialState(): GameState {
-  const map = generateMap();
+export function createInitialState(seed?: number): GameState {
+  const { map, seed: usedSeed } = generateIntelligentMap(seed);
   const buildings = initializeStartingArea(map);
   
   return {
-    resources: { rice: 150, tea: 50, silk: 0, jade: 0, iron: 0, bamboo: 50, gold: 200 },
+    resources: { rice: 80, tea: 50, silk: 0, jade: 0, iron: 0, bamboo: 50, gold: 100 },
     maxResources: { rice: 300, tea: 200, silk: 100, jade: 150, iron: 200, bamboo: 300, gold: 500 },
-    population: 8,
-    maxPopulation: 8,
-    populationTypes: { farmer: 5, merchant: 2, warrior: 1, monk: 0, fisherman: 0 },
-    workers: 8,
+    population: 5,
+    maxPopulation: 5,
+    populationTypes: { farmer: 3, merchant: 1, warrior: 1, monk: 0, fisherman: 0 },
+    workers: 5,
     usedWorkers: 0,
     map,
     buildings,
@@ -35,6 +36,7 @@ export function createInitialState(): GameState {
     discoveredTerritories: new Map(),
     settlementLevel: 1,
     lastSettlementLevel: 1,
+    mapSeed: usedSeed,  // Store seed for display and sharing
   };
 }
 
@@ -85,6 +87,23 @@ function initializeStartingArea(map: Tile[][]): Building[] {
   };
   buildings.push(townHall);
   map[startCenterY][startCenterX].building = townHall;
+  
+  // Place a starting house nearby (west of town hall)
+  const startingHouseX = startCenterX - 2;
+  const startingHouseY = startCenterY;
+  if (map[startingHouseY] && map[startingHouseY][startingHouseX]) {
+    const startingHouse: Building = {
+      type: 'house',
+      x: startingHouseX,
+      y: startingHouseY,
+      level: 1,
+      workers: 0,
+      productionProgress: 0,
+      isStartingBuilding: true,  // Mark as starting building
+    };
+    buildings.push(startingHouse);
+    map[startingHouseY][startingHouseX].building = startingHouse;
+  }
   
   return buildings;
 }

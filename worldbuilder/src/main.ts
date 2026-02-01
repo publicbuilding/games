@@ -51,9 +51,14 @@ class Game {
     // Setup UI buttons
     this.setupUIButtons();
 
-    // Show welcome notification
+    // Show welcome notification and tutorial
     if (!saved) {
-      notificationSystem.important('Welcome to the Eastern Realm! Build houses first, then farms for rice.');
+      // Show welcome popup that requires interaction (tutorial mode)
+      notificationSystem.important('🏠 BUILD A HOUSE FIRST! Start your settlement by building a house to grow your population.');
+      // Show tutorial quest markers on next frame
+      setTimeout(() => {
+        this.showTutorialMarkers();
+      }, 100);
     } else {
       notificationSystem.success('Welcome back to the Eastern Realm!');
     }
@@ -250,6 +255,20 @@ class Game {
           if (def.workers > 0) {
             assignWorkers(this.state, building, def.workers);
           }
+          
+          // Advance tutorial
+          if (this.state.tutorialStep > 0) {
+            if (this.state.tutorialStep === 1 && this.ui.selectedBuilding === 'house') {
+              this.state.tutorialStep = 2;
+              setTimeout(() => this.showTutorialMarkers(), 500);
+            } else if (this.state.tutorialStep === 2 && this.ui.selectedBuilding === 'ricePaddy') {
+              this.state.tutorialStep = 3;
+              setTimeout(() => this.showTutorialMarkers(), 500);
+            } else if (this.state.tutorialStep === 3 && this.ui.selectedBuilding === 'ricePaddy') {
+              this.state.tutorialStep = 4;
+              setTimeout(() => this.showTutorialMarkers(), 500);
+            }
+          }
         }
       } else {
         soundManager.playUISound('error');
@@ -315,6 +334,20 @@ class Game {
     const modal = document.getElementById('premium-modal');
     if (modal) {
       modal.style.display = 'none';
+    }
+  }
+
+  private showTutorialMarkers(): void {
+    // Show step-by-step tutorial guidance for first 3 buildings
+    if (this.state.tutorialStep === 1) {
+      notificationSystem.show('💡 Step 1: Click "house" in the left panel to select it', 'info', 5000);
+    } else if (this.state.tutorialStep === 2) {
+      notificationSystem.show('💡 Step 2: Click a nearby empty tile to place your house', 'info', 5000);
+    } else if (this.state.tutorialStep === 3) {
+      notificationSystem.show('🌾 Step 3: Build a Rice Paddy to produce food for your people!', 'info', 5000);
+    } else if (this.state.tutorialStep >= 4) {
+      notificationSystem.show('✨ Great progress! Continue building to grow your settlement!', 'success', 3000);
+      this.state.tutorialStep = 0; // Tutorial complete
     }
   }
 

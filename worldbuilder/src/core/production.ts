@@ -3,7 +3,9 @@ import { getBuildingDef, BUILDINGS } from './buildings';
 import { updateQuestProgress } from './quests';
 import { floatingNumberSystem } from '../ui/feedback/floatingNumbers';
 import { soundManager } from './sounds';
-import { checkLevelUp } from './progression';
+import { celebrationSystem } from '../ui/feedback/celebrations';
+import { notificationSystem } from '../ui/feedback/notifications';
+import { checkLevelUp, SETTLEMENT_LEVELS, getUnlockedBuildings } from './progression';
 
 const RICE_CONSUMPTION_RATE = 0.3; // Rice per person per second
 const MIN_RICE_FOR_GROWTH = 30;
@@ -318,12 +320,48 @@ export function gameTick(state: GameState): void {
   const levelUpResult = checkLevelUp(state, state.lastSettlementLevel as any);
   if (levelUpResult.leveledUp) {
     state.lastSettlementLevel = levelUpResult.newLevel as any;
-    // Mark that a level-up occurred (can be used for UI notifications)
-    (state as any).levelUpNotification = {
-      level: levelUpResult.newLevel,
-      levelName: require('./progression').SETTLEMENT_LEVELS[levelUpResult.newLevel as any].name,
-      rewards: levelUpResult.rewards,
-    };
+    
+    // Create level-up celebration with sound and visual effects
+    soundManager.playCelebrationSound('fanfare');
+    const centerX = state.buildings.length > 0 ? state.buildings[0].x * 48 + 24 : 300;
+    const centerY = state.buildings.length > 0 ? state.buildings[0].y * 48 + 24 : 300;
+    
+    // Create visual celebration effects
+    celebrationSystem.createLevelUpCelebration(centerX, centerY);
+    
+    // Show milestone notification with level name and rewards
+    const levelDef = SETTLEMENT_LEVELS[levelUpResult.newLevel as any];
+    let rewardText = '';
+    if (levelUpResult.rewards?.gold) {
+      rewardText += `+${levelUpResult.rewards.gold} 🪙 `;
+    }
+    if (levelUpResult.rewards?.population) {
+      rewardText += `+${levelUpResult.rewards.population} 👥`;
+    }
+    
+    const message = `🎉 LEVEL ${levelUpResult.newLevel}: ${levelDef.name.toUpperCase()}!\n${rewardText}`;
+    notificationSystem.important(message);
+    
+    // Show unlocked buildings if any
+    const unlockedBuildings = levelDef.unlockedBuildings;
+    if (unlockedBuildings.length > 0) {
+      const buildingNames = unlockedBuildings.map(b => getBuildingDef(b).name).join(', ');
+      setTimeout(() => {
+        notificationSystem.show(`✨ New buildings unlocked: ${buildingNames}`, 'success', 5000);
+      }, 2000);
+    }
+    
+    // Show next level preview
+    if (levelUpResult.newLevel < 10) {
+      const nextLevelDef = SETTLEMENT_LEVELS[(levelUpResult.newLevel + 1) as any];
+      setTimeout(() => {
+        notificationSystem.show(
+          `📊 Next Level (${levelUpResult.newLevel + 1}): ${nextLevelDef.name} - Need ${nextLevelDef.populationRequired} population`,
+          'info',
+          6000
+        );
+      }, 4000);
+    }
   }
 
   // Update timing
