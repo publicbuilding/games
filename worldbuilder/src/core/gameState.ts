@@ -13,7 +13,7 @@ export function createInitialState(seed?: number): GameState {
   const buildings = initializeStartingArea(map);
   
   return {
-    resources: { rice: 80, tea: 50, silk: 0, jade: 0, iron: 0, bamboo: 50, gold: 100 },
+    resources: { rice: 80, tea: 50, silk: 0, jade: 0, iron: 0, bamboo: 50, gold: 150 },
     maxResources: { rice: 300, tea: 200, silk: 100, jade: 150, iron: 200, bamboo: 300, gold: 500 },
     population: 5,
     maxPopulation: 5,

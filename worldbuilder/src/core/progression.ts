@@ -32,7 +32,7 @@ export const SETTLEMENT_LEVELS: Record<SettlementLevel, LevelDefinition> = {
     buildingTypesRequired: 0,
     goldProductionRequired: 0,
     unlockedBuildings: [
-      'house', 'ricePaddy', 'teaPlantation', 'fishingDock'
+      'house', 'ricePaddy', 'teaPlantation', 'fishingDock', 'warehouse', 'market', 'bambooGrove', 'jadeMine'
     ],
     rewards: {},
   },
@@ -43,7 +43,7 @@ export const SETTLEMENT_LEVELS: Record<SettlementLevel, LevelDefinition> = {
     buildingTypesRequired: 2,
     goldProductionRequired: 0.5,
     unlockedBuildings: [
-      'market', 'warehouse', 'teaHouse', 'silkFarm'
+      'teaHouse', 'silkFarm'
     ],
     rewards: { gold: 100, population: 5 },
   },
@@ -54,7 +54,7 @@ export const SETTLEMENT_LEVELS: Record<SettlementLevel, LevelDefinition> = {
     buildingTypesRequired: 4,
     goldProductionRequired: 1.0,
     unlockedBuildings: [
-      'dojo', 'temple', 'bambooGrove', 'watchtower'
+      'dojo', 'temple', 'watchtower'
     ],
     rewards: { gold: 200, population: 10 },
   },
@@ -65,7 +65,7 @@ export const SETTLEMENT_LEVELS: Record<SettlementLevel, LevelDefinition> = {
     buildingTypesRequired: 6,
     goldProductionRequired: 2.0,
     unlockedBuildings: [
-      'harbor', 'shipyard', 'jadeMine', 'ironMine'
+      'harbor', 'shipyard', 'ironMine'
     ],
     rewards: { gold: 300, population: 15 },
   },

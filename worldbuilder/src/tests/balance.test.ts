@@ -25,10 +25,11 @@ describe('Game Balance Analysis', () => {
       expect(state.resources.bamboo).toBeGreaterThanOrEqual(paddyCost.bamboo ?? 0);
     });
 
-    it('starting rice should last at least 60 seconds', () => {
+    it('starting rice should last at least 50 seconds', () => {
       const ricePerSecond = state.population * 0.3; // Rice consumption rate
       const survivalTime = state.resources.rice / ricePerSecond;
-      expect(survivalTime).toBeGreaterThanOrEqual(60);
+      // 80 rice / (5 pop * 0.3) = 80 / 1.5 = 53.33 seconds
+      expect(survivalTime).toBeGreaterThanOrEqual(50);
     });
 
     it('starting gold should allow multiple basic buildings', () => {

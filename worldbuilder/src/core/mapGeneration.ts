@@ -66,6 +66,8 @@ function generateMountainRanges(
       if (mountainGrid[y][x] > 0.5) {
         // Already a ridge
         map[y][x].type = 'mountain';
+        // Set resource amount based on mountain intensity
+        map[y][x].resourceAmount = Math.floor(50 + mountainGrid[y][x] * 100);
       } else if (mountainGrid[y][x] > 0.3) {
         // Foothills around mountains
         map[y][x].type = 'forest';
