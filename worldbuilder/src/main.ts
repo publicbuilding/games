@@ -32,12 +32,20 @@ class Game {
     const saved = loadGame();
     this.state = saved || createInitialState();
 
-    // Initialize UI state
-    const { width, height } = getMapDimensions();
+    // Initialize UI state with camera centered on starting area
+    // The starting area is at approximately grid (20, 15) in a 40x30 map
+    // Isometric projection: screenX = (gridX - gridY) * 32, screenY = (gridX + gridY) * 16
+    const startGridX = 20; // Center of starting area
+    const startGridY = 15;
+    const isometricTileWidth = 64;  // Match IsometricRenderer
+    const isometricTileHeight = 32;
+    const cameraX = (startGridX - startGridY) * (isometricTileWidth / 2);
+    const cameraY = (startGridX + startGridY) * (isometricTileHeight / 2);
+    
     this.ui = {
       selectedBuilding: null,
-      cameraX: (width * 48) / 2,
-      cameraY: (height * 48) / 2,
+      cameraX,
+      cameraY,
       zoom: 1,
       showPremiumModal: false,
       notification: null,

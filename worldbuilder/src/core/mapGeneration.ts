@@ -330,6 +330,7 @@ function ensureStartingArea(
       if (map[y] && map[y][x]) {
         map[y][x].type = 'plains';
         map[y][x].resourceAmount = undefined;
+        map[y][x].isStartingArea = true;
       }
     }
   }
@@ -349,7 +350,16 @@ function ensureStartingArea(
     const riverY = startCenterY + (rng.next() < 0.5 ? 3 : -3);
     if (map[riverY] && map[riverY][riverX]) {
       map[riverY][riverX].type = 'river';
+      map[riverY][riverX].isStartingArea = true;
       createLake(riverX, riverY, 1, map);
+      // Mark lake tiles as starting area
+      for (let y = riverY - 1; y <= riverY + 1; y++) {
+        for (let x = riverX - 1; x <= riverX + 1; x++) {
+          if (map[y] && map[y][x] && map[y][x].type === 'river') {
+            map[y][x].isStartingArea = true;
+          }
+        }
+      }
     }
   }
   
@@ -373,6 +383,7 @@ function ensureStartingArea(
         if (map[y] && map[y][x] && map[y][x].type !== 'mountain') {
           map[y][x].type = 'forest';
           map[y][x].resourceAmount = 90;
+          map[y][x].isStartingArea = true;
         }
       }
     }
@@ -399,6 +410,7 @@ function ensureStartingArea(
     if (map[mountainY] && map[mountainY][mountainX]) {
       map[mountainY][mountainX].type = 'mountain';
       map[mountainY][mountainX].resourceAmount = 80;
+      map[mountainY][mountainX].isStartingArea = true;
     }
   }
 }

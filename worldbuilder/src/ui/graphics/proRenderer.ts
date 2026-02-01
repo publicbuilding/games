@@ -199,46 +199,26 @@ export class ProRenderer {
     this.animationSystem.updateAnimations(16);
     this.cameraAndPostProcessing.updateCamera(16);
 
-    // Get ambient light from atmospheric effects
+    // Clean background for top-down city builder view
+    // Simple sky color based on time of day (subtle variation only)
     const ambientLight = this.atmosphericEffects.getAmbientLightColor(state.dayTime);
     const bgColor = `rgba(${ambientLight.r}, ${ambientLight.g}, ${ambientLight.b}, 1)`;
     
     ctx.fillStyle = bgColor;
     ctx.fillRect(0, 0, width, height);
 
-    // Draw celestial body (sun/moon)
-    this.atmosphericEffects.drawCelestialBody(ctx, width, height, state.dayTime);
-
-    // Add sun flare during daytime
-    if (state.dayTime > 0.2 && state.dayTime < 0.8) {
-      const sunIntensity = Math.sin(state.dayTime * Math.PI) * 0.6;
-      const sunX = width * 0.2 + (state.dayTime * 0.6) * width;
-      const sunY = height * 0.2 + Math.sin(state.dayTime * Math.PI) * height * 0.15;
-      this.premiumEffects.drawSunFlare(ctx, sunX, sunY, sunIntensity);
-    }
-
-    // Draw god rays
-    this.atmosphericEffects.drawGodRays(ctx, width, height, state.dayTime, this.animationFrameCount);
-
-    // Apply volumetric fog
-    this.atmosphericEffects.applyVolumetricFog(ctx, width, height, state.dayTime);
-
-    // Draw dust motes
-    this.atmosphericEffects.drawDustMotes(ctx, state.dayTime, this.animationFrameCount);
-
-    // Apply atmospheric perspective (distant haze)
-    this.premiumEffects.applyAtmosphericPerspective(ctx, width, height, 0.12);
-
-    // Apply seasonal tinting
-    this.weatherAndSeasons.applySeasonalTint(ctx, this.weatherState.season, width, height);
-
     ctx.save();
 
-    // Apply camera transform with easing
+    // Apply camera transform - use UI camera for world positioning
+    // (UI state maintains the canonical camera position)
     const camera = this.cameraAndPostProcessing.getCameraWithShake();
+    const cameraX = ui.cameraX || camera.x;
+    const cameraY = ui.cameraY || camera.y;
+    const cameraZoom = ui.zoom || camera.zoom;
+    
     ctx.translate(width / 2, height / 2);
-    ctx.scale(camera.zoom, camera.zoom);
-    ctx.translate(-camera.x, -camera.y);
+    ctx.scale(cameraZoom, cameraZoom);
+    ctx.translate(-cameraX, -cameraY);
 
     // Render layers in order
     this.renderMap(state, ui);
@@ -250,17 +230,12 @@ export class ProRenderer {
     ctx.restore();
 
     // Weather effects (rain, snow, leaves)
-    this.drawWeatherEffects(ctx, width, height);
+    this.renderWeatherEffects(ctx, width, height, state);
 
-    // Post-processing effects
-    this.atmosphericEffects.applyAmbientOcclusion(ctx, width, height, 0.25); // Slightly stronger AO
-    
-    // Enhanced vignette for cinematic feel
-    const vignetteStrength = 0.35 + Math.sin(state.dayTime * Math.PI) * 0.1;
+    // Minimal post-processing for clean top-down view
+    // Light vignette only (no AO, no DoF - they obscure the game board)
+    const vignetteStrength = 0.1; // Very subtle vignette
     this.cameraAndPostProcessing.applyVignette(ctx, width, height, vignetteStrength);
-    
-    // Subtle depth of field
-    this.cameraAndPostProcessing.applyDepthOfField(ctx, width, height, 0.15);
 
     // Render UI overlay
     this.renderUI(state, ui, width, height);
@@ -293,35 +268,62 @@ export class ProRenderer {
     const isAlt = (tile.x + tile.y) % 2 === 0;
     const color = isAlt ? palette.primary : palette.secondary;
 
-    // Render terrain normally if visible or in starting area
-    if (isVisible || tile.isStartingArea) {
-      if (tile.type === 'river') {
-        // Animated water
-        this.isometricRenderer.drawWater(ctx, pos.screenX, pos.screenY, this.animationFrameCount);
-      } else if (tile.type === 'mountain') {
-        // Mountains with elevation
-        this.isometricRenderer.drawMountain(ctx, pos.screenX, pos.screenY, color, '#e8e8e8');
-      } else if (tile.type === 'forest') {
-        // Tile base
-        this.isometricRenderer.drawIsometricTile(ctx, pos.screenX, pos.screenY, color, palette.secondary, 0.5);
-        // Trees
-        this.isometricRenderer.drawTree(ctx, pos.screenX, pos.screenY - 10, '#654321', palette.primary, this.animationFrameCount);
-      } else if (tile.type === 'bamboo') {
-        // Tile base
-        this.isometricRenderer.drawIsometricTile(ctx, pos.screenX, pos.screenY, color, palette.secondary, 0.5);
-        // Bamboo stalks
-        ctx.fillStyle = palette.primary;
-        ctx.fillRect(pos.screenX - 6, pos.screenY - 12, 2, 14);
-        ctx.fillRect(pos.screenX, pos.screenY - 12, 2, 14);
-        ctx.fillRect(pos.screenX + 6, pos.screenY - 12, 2, 14);
-      } else {
-        // Standard terrain tile
-        this.isometricRenderer.drawIsometricTile(ctx, pos.screenX, pos.screenY, color, palette.secondary, 0.5);
+    // ALWAYS render the terrain tile - visible shows full color, invisible shows desaturated
+    if (tile.type === 'river') {
+      // Animated water
+      this.isometricRenderer.drawWater(ctx, pos.screenX, pos.screenY, this.animationFrameCount);
+      if (!isVisible && !tile.isStartingArea) {
+        // Desaturate fog of war water
+        ctx.fillStyle = 'rgba(30, 30, 40, 0.4)';
+        ctx.beginPath();
+        ctx.moveTo(pos.screenX, pos.screenY - 24);
+        ctx.lineTo(pos.screenX + 24, pos.screenY);
+        ctx.lineTo(pos.screenX, pos.screenY + 24);
+        ctx.lineTo(pos.screenX - 24, pos.screenY);
+        ctx.closePath();
+        ctx.fill();
       }
-
-      // Highlight starting area with subtle glow
-      if (tile.isStartingArea) {
-        ctx.fillStyle = 'rgba(255, 255, 0, 0.15)';
+    } else if (tile.type === 'mountain') {
+      // Mountains with elevation
+      this.isometricRenderer.drawMountain(ctx, pos.screenX, pos.screenY, color, '#e8e8e8');
+      if (!isVisible && !tile.isStartingArea) {
+        // Fog overlay
+        ctx.fillStyle = 'rgba(30, 30, 40, 0.4)';
+        ctx.beginPath();
+        ctx.moveTo(pos.screenX, pos.screenY - 24);
+        ctx.lineTo(pos.screenX + 24, pos.screenY);
+        ctx.lineTo(pos.screenX, pos.screenY + 24);
+        ctx.lineTo(pos.screenX - 24, pos.screenY);
+        ctx.closePath();
+        ctx.fill();
+      }
+    } else if (tile.type === 'forest') {
+      // Tile base
+      this.isometricRenderer.drawIsometricTile(ctx, pos.screenX, pos.screenY, color, palette.secondary, 0.5);
+      // Trees
+      this.isometricRenderer.drawTree(ctx, pos.screenX, pos.screenY - 10, '#654321', palette.primary, this.animationFrameCount);
+      if (!isVisible && !tile.isStartingArea) {
+        // Fog overlay
+        ctx.fillStyle = 'rgba(30, 30, 40, 0.4)';
+        ctx.beginPath();
+        ctx.moveTo(pos.screenX, pos.screenY - 24);
+        ctx.lineTo(pos.screenX + 24, pos.screenY);
+        ctx.lineTo(pos.screenX, pos.screenY + 24);
+        ctx.lineTo(pos.screenX - 24, pos.screenY);
+        ctx.closePath();
+        ctx.fill();
+      }
+    } else if (tile.type === 'bamboo') {
+      // Tile base
+      this.isometricRenderer.drawIsometricTile(ctx, pos.screenX, pos.screenY, color, palette.secondary, 0.5);
+      // Bamboo stalks
+      ctx.fillStyle = palette.primary;
+      ctx.fillRect(pos.screenX - 6, pos.screenY - 12, 2, 14);
+      ctx.fillRect(pos.screenX, pos.screenY - 12, 2, 14);
+      ctx.fillRect(pos.screenX + 6, pos.screenY - 12, 2, 14);
+      if (!isVisible && !tile.isStartingArea) {
+        // Fog overlay
+        ctx.fillStyle = 'rgba(30, 30, 40, 0.4)';
         ctx.beginPath();
         ctx.moveTo(pos.screenX, pos.screenY - 24);
         ctx.lineTo(pos.screenX + 24, pos.screenY);
@@ -331,8 +333,24 @@ export class ProRenderer {
         ctx.fill();
       }
     } else {
-      // Fog of war - show as dark unexplored area
-      ctx.fillStyle = 'rgba(30, 30, 40, 0.7)';
+      // Standard terrain tile (plains)
+      this.isometricRenderer.drawIsometricTile(ctx, pos.screenX, pos.screenY, color, palette.secondary, 0.5);
+      if (!isVisible && !tile.isStartingArea) {
+        // Fog overlay
+        ctx.fillStyle = 'rgba(30, 30, 40, 0.4)';
+        ctx.beginPath();
+        ctx.moveTo(pos.screenX, pos.screenY - 24);
+        ctx.lineTo(pos.screenX + 24, pos.screenY);
+        ctx.lineTo(pos.screenX, pos.screenY + 24);
+        ctx.lineTo(pos.screenX - 24, pos.screenY);
+        ctx.closePath();
+        ctx.fill();
+      }
+    }
+
+    // Highlight starting area with subtle glow
+    if (tile.isStartingArea) {
+      ctx.fillStyle = 'rgba(255, 255, 0, 0.15)';
       ctx.beginPath();
       ctx.moveTo(pos.screenX, pos.screenY - 24);
       ctx.lineTo(pos.screenX + 24, pos.screenY);
@@ -343,7 +361,7 @@ export class ProRenderer {
     }
 
     // Draw grid overlay if enabled
-    if (this.showGridOverlay && isVisible) {
+    if (this.showGridOverlay && (isVisible || tile.isStartingArea)) {
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
       ctx.lineWidth = 1;
       ctx.beginPath();
@@ -656,6 +674,59 @@ export class ProRenderer {
     
     // Render celebration particles
     celebrationSystem.render(ctx, ui.cameraX, ui.cameraY, ui.zoom);
+  }
+
+  /**
+   * Render weather effects (rain, snow, leaves)
+   */
+  private renderWeatherEffects(ctx: CanvasRenderingContext2D, width: number, height: number, state: GameState): void {
+    // Draw seasonal weather particles
+    if (this.weatherState.type === 'rain') {
+      this.drawRainEffect(ctx, width, height);
+    } else if (this.weatherState.type === 'snow') {
+      this.drawSnowEffect(ctx, width, height);
+    }
+    
+    // Draw falling leaves in autumn
+    if (this.weatherState.season === 'autumn') {
+      this.waterAndNatureEffects.drawCherryBlossoms(ctx, width, height, 'autumn', this.animationFrameCount);
+    }
+  }
+
+  /**
+   * Draw rain effect
+   */
+  private drawRainEffect(ctx: CanvasRenderingContext2D, width: number, height: number): void {
+    const rainDrops = 50;
+    ctx.strokeStyle = 'rgba(150, 200, 255, 0.4)';
+    ctx.lineWidth = 1.5;
+    
+    for (let i = 0; i < rainDrops; i++) {
+      const x = (this.animationFrameCount * 2 + i * 25) % width;
+      const y = ((this.animationFrameCount * 5 + i * 15) % (height + 100)) - 100;
+      
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(x - 2, y + 8);
+      ctx.stroke();
+    }
+  }
+
+  /**
+   * Draw snow effect
+   */
+  private drawSnowEffect(ctx: CanvasRenderingContext2D, width: number, height: number): void {
+    const snowFlakes = 40;
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+    
+    for (let i = 0; i < snowFlakes; i++) {
+      const x = (this.animationFrameCount * 0.5 + i * 32 + Math.sin(i) * 20) % width;
+      const y = ((this.animationFrameCount * 1.5 + i * 18) % (height + 50)) - 50;
+      
+      ctx.beginPath();
+      ctx.arc(x, y, 2, 0, Math.PI * 2);
+      ctx.fill();
+    }
   }
 
   /**
