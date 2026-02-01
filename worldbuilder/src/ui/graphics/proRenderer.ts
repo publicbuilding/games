@@ -5,7 +5,7 @@
  */
 
 import { GameState, Building, Tile, UIState, BuildingType, TileType, PopulationType } from '../../types';
-import { getBuildingDef } from '../../core/buildings';
+import { getBuildingDef, BUILDINGS } from '../../core/buildings';
 import { getMapDimensions } from '../../core/gameState';
 import { SpriteGenerator } from './spriteGenerator';
 import { IsometricRenderer } from './isometricRenderer';
@@ -71,6 +71,64 @@ const TERRAIN_PALETTE: Record<TileType, { primary: string; secondary: string }> 
   bamboo: { primary: '#7db542', secondary: '#96d646' },
   mountain: { primary: '#8b8680', secondary: '#a39a93' },
   forest: { primary: '#2d5016', secondary: '#4a7c23' },
+};
+
+// Color palette for UI
+const COLORS: Record<string, string> = {
+  grass: '#4a7c23',
+  grassAlt: '#5a8c33',
+  water: '#3498db',
+  trees: '#2d5016',
+  rocks: '#7f8c8d',
+  building: '#8b4513',
+  buildingHover: '#a0522d',
+  selected: '#f1c40f',
+  premium: '#9b59b6',
+  grid: 'rgba(0,0,0,0.1)',
+};
+
+const BUILDING_COLORS: Record<BuildingType, string> = {
+  ricePaddy: '#8b7355',
+  teaPlantation: '#6b9d3e',
+  silkFarm: '#d4a5a5',
+  fishingDock: '#8b6f47',
+  jadeMine: '#696969',
+  ironMine: '#555555',
+  bambooGrove: '#7db542',
+  blacksmith: '#8b4513',
+  teaHouse: '#d4a5a5',
+  market: '#f4c430',
+  warehouse: '#9a9a9a',
+  watchtower: '#696969',
+  dojo: '#c41e3a',
+  castle: '#8b7355',
+  house: '#8b6f47',
+  temple: '#c41e3a',
+  inn: '#d4a5a5',
+  harbor: '#8b7355',
+  shipyard: '#8b6f47',
+};
+
+const BUILDING_ICONS: Record<BuildingType, string> = {
+  ricePaddy: '🌾',
+  teaPlantation: '🫖',
+  silkFarm: '🪡',
+  fishingDock: '🎣',
+  jadeMine: '💎',
+  ironMine: '⛏️',
+  bambooGrove: '🎋',
+  blacksmith: '🔨',
+  teaHouse: '☕',
+  market: '🏪',
+  warehouse: '📦',
+  watchtower: '🏯',
+  dojo: '🥋',
+  castle: '🏰',
+  house: '🏠',
+  temple: '⛩️',
+  inn: '🏨',
+  harbor: '⚓',
+  shipyard: '🚢',
 };
 
 export class ProRenderer {
@@ -706,6 +764,9 @@ export class ProRenderer {
         ctx.fillText(tooltipText, 15, height - 35);
       }
     }
+
+    // Render building palette for placement
+    this.renderBuildingPalette(state, ui, width, height);
   }
 
   /**
@@ -1002,5 +1063,96 @@ export class ProRenderer {
         }
       }, { once: true });
     }
+  }
+
+  private renderBuildingPalette(
+    state: GameState,
+    ui: UIState,
+    width: number,
+    height: number
+  ): void {
+    const ctx = this.ctx;
+    const paletteHeight = 100;
+    const y = height - paletteHeight;
+
+    // Background
+    ctx.fillStyle = 'rgba(0,0,0,0.85)';
+    ctx.fillRect(0, y, width, paletteHeight);
+
+    // Building buttons
+    const buildingTypes = Object.keys(BUILDINGS) as BuildingType[];
+    const btnSize = 60;
+    const spacing = 10;
+    const totalWidth = buildingTypes.length * (btnSize + spacing);
+    let startX = (width - totalWidth) / 2;
+
+    // Scroll if too many buildings
+    if (totalWidth > width - 40) {
+      startX = 20;
+    }
+
+    buildingTypes.forEach((type, i) => {
+      const def = BUILDINGS[type];
+      const x = startX + i * (btnSize + spacing);
+      const btnY = y + 10;
+
+      // Button background
+      const isSelected = ui.selectedBuilding === type;
+      const canBuild = this.canAffordQuick(state, type);
+
+      ctx.fillStyle = isSelected 
+        ? COLORS.selected 
+        : (canBuild ? BUILDING_COLORS[type] : '#444');
+      ctx.fillRect(x, btnY, btnSize, btnSize);
+
+      // Border
+      ctx.strokeStyle = def.premium ? COLORS.premium : (isSelected ? '#fff' : '#666');
+      ctx.lineWidth = isSelected ? 3 : 1;
+      ctx.strokeRect(x, btnY, btnSize, btnSize);
+
+      // Icon
+      ctx.font = '24px serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(BUILDING_ICONS[type], x + btnSize / 2, btnY + btnSize / 2 - 5);
+
+      // Cost hint
+      const mainCost = Object.entries(def.cost)[0];
+      if (mainCost) {
+        ctx.font = '10px sans-serif';
+        ctx.fillStyle = canBuild ? '#fff' : '#888';
+        ctx.fillText(`${mainCost[1]}g`, x + btnSize / 2, btnY + btnSize - 8);
+      }
+
+      // Premium badge
+      if (def.premium) {
+        ctx.fillStyle = COLORS.premium;
+        ctx.font = '10px sans-serif';
+        ctx.fillText('⭐', x + btnSize - 10, btnY + 10);
+      }
+    });
+
+    // Instructions
+    ctx.fillStyle = '#888';
+    ctx.font = '12px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(
+      ui.selectedBuilding 
+        ? 'Click map to place | Right-click to cancel | Shift+click to demolish'
+        : 'Select a building below | Scroll to zoom | Drag to pan',
+      width / 2,
+      y + 85
+    );
+  }
+
+  private canAffordQuick(state: GameState, type: BuildingType): boolean {
+    const def = BUILDINGS[type];
+    for (const [resource, amount] of Object.entries(def.cost)) {
+      if ((state.resources[resource as keyof typeof state.resources] ?? 0) < (amount ?? 0)) {
+        return false;
+      }
+    }
+    if (def.premium && state.premiumCurrency < 50) return false;
+    return true;
   }
 }
